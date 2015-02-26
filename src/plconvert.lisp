@@ -4,6 +4,7 @@
 
 (in-package #:plconvert)
 
+(defvar *options* nil)
 (defvar *external-format* :utf-8)
 
 (defun file-type (pathname)
@@ -31,9 +32,11 @@
   (length (rest (third (parse-file pathname)))))
 
 (defun check-directory-files (pathname)
-  (mapcar (lambda (pathname)
-            (format t "Parsing definitions from file: ~s~%" pathname)
-            (list (file-type pathname)
-                  (pathname-name pathname)
-                  (check-file pathname)))
-          (uiop:directory-files pathname)))
+  (let ((summary
+         (mapcar (lambda (pathname)
+                   (format t "Parsing definitions from file: ~s~%" pathname)
+                   (list (file-type pathname)
+                         (pathname-name pathname)
+                         (check-file pathname)))
+                 (uiop:directory-files pathname))))
+    (values summary (reduce #'+ (mapcar #'third summary)))))
