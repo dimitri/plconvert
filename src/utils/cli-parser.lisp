@@ -1,4 +1,4 @@
-(in-package #:please)
+(in-package #:plconvert)
 
 (eval-when (:load-toplevel :compile-toplevel :execute)
   (defstruct command verbs bindings help lambda)
