@@ -25,34 +25,12 @@
     (destructuring-bind (ws1 name ws2 mode ws3 type default ws4) params
       (declare (ignore ws1 ws2 ws3 ws4))
       (let ((mode (or mode :in)))
-        (list :name name
-              :type type
-              :mode mode
-              :default (when default (cdr default)))))))
+        (make-funarg :name name
+                     :type type
+                     :mode mode
+                     :default (when default (cdr default)))))))
 
 (defrule in-out (and kw-in kw-out) (:constant :inout))
-
-(defrule typename (and maybe-qualified-namestring
-                       (? (and "%" namestring))
-                       (? typmod))
-  (:destructure (name template typmod)
-                (list :type name
-                      :template (when template (second template))
-                      :scale (when typmod (getf typmod :scale))
-                      :precision (when typmod (getf typmod :precision)))))
-
-(defrule typmod (and "("
-                     ignore-whitespace dec-number ignore-whitespace
-                     (? (and "," ignore-whitespace dec-number ignore-whitespace))
-                     ")")
-  (:lambda (x)
-    (destructuring-bind (open ws1 scale ws2 precision close) x
-      (declare (ignore open ws1 ws2 close))
-      (let ((precision (when precision
-                         (destructuring-bind (c ws1 precision ws2) precision
-                           (declare (ignore c ws1 ws2))
-                           precision))))
-        (list :scale scale :precision precision)))))
 
 (defrule block (and declare kw-begin body exception kw-end ";")
   (:lambda (x)
@@ -69,7 +47,9 @@
   (:lambda (x)
     (destructuring-bind (dec beg body except end fname ws sc) x
       (declare (ignore beg end fname ws sc))
-      (list :declarations dec :body body :exception except))))
+      (make-code :decl-list dec
+                 :body body
+                 :exception except))))
 
 (defrule declare (and kw-declare declarations)
   (:destructure (dec vars) (declare (ignore dec)) `(:declare ,@vars)))
@@ -85,27 +65,31 @@
                               declare-varname
                               ignore-whitespace
                               typename
-                              ignore-whitespace
                               (? default-value)
                               ignore-whitespace ";")
   (:lambda (x)
-    (destructuring-bind (ws1 noise varname ws2 type ws3 default ws4 sc) x
-      (declare (ignore noise ws1 ws2 ws3 ws4 sc))
-      (list :var varname :type type :default default))))
+    (destructuring-bind (ws1 noise varname ws2 type default ws3 sc) x
+      (declare (ignore noise ws1 ws2 ws3 sc))
+      (make-decl-var :name varname :type type :default default))))
 
 (defrule declare-varname (or dollar-varname varname-%option namestring))
 
-(defrule default-value (and ":=" ignore-whitespace expr)
-  (:destructure (a ws e) (declare (ignore a ws)) e))
+(defrule default-value (and ignore-whitespace ":=" ignore-whitespace expr)
+  (:destructure (ws1 a ws2 e) (declare (ignore a ws1 ws2)) e))
 
 (defrule type-declaration (and kw-type namestring
                                kw-is kw-table kw-of
                                type-definition
                                ignore-whitespace
                                ";")
-  (:destructure (typ name is table of table-name ws sc)
-                (declare (ignore typ is table of ws sc))
-                `(:type ,name :table ,table-name)))
+  (:lambda (x)
+    (destructuring-bind (typ name is table of table-name ws sc) x
+      (declare (ignore typ is table of ws sc))
+      (cond ((eq :var (first table-name))
+             (make-decl-type :name name :table (second table-name)))
+
+            ((eq :hash (first table-name))
+             (make-decl-type :name name :table (second table-name)))))))
 
 (defrule type-definition (or index-by var))
 

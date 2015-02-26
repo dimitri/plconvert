@@ -19,7 +19,7 @@
             `(:functions ,@funs)))))
 
 (defrule procedure (and kw-procedure
-                        maybe-qualified-namestring
+                        namestring
                         fdef-arglist
                         kw-is
                         function-block)
@@ -27,14 +27,13 @@
     (destructuring-bind (p name args is fun)
         function
       (declare (ignore p is))
-      (format t "Parsed procedure: ~s~%" (getf name :name))
-      (list :procedure
-            (list :name name
-                  :args args
-                  :code fun)))))
+      (format t "Parsed procedure: ~s~%" name)
+      (make-proc :name name
+                 :arg-list args
+                 :code fun))))
 
 (defrule function (and kw-function
-                       maybe-qualified-namestring
+                       namestring
                        fdef-arglist
                        kw-return
                        typename
@@ -44,12 +43,11 @@
     (destructuring-bind (f name args r rettype is fun)
         function
       (declare (ignore f r is))
-      (format t "Parsed function: ~s~%" (getf name :name))
-      (list :function
-            (list :name name
-                  :args args
-                  :rettype rettype
-                  :code fun)))))
+      (format t "Parsed function: ~s~%" name)
+      (make-fun :name name
+                :arg-list args
+                :ret-type rettype
+                :code fun))))
 
 (defrule create-or-replace (and kw-create (? (and kw-or kw-replace)))
   (:constant :c-o-r))

@@ -33,11 +33,11 @@
   (:lambda (pn)
     (destructuring-bind (a b c) pn
       (cond ((and a b c)
-             (list :schema a :package (second b) :name (second c)))
+             (make-qname :schema a :package (second b) :name (second c)))
             ((and a b)
-             (list :schema nil :package a :name (second b)))
+             (make-qname :schema nil :package a :name (second b)))
             (t
-             (list :schema nil :package nil :name a))))))
+             (make-qname :schema nil :package nil :name a))))))
 
 (defrule dec-number (and (? "-") (+ (digit-char-p character)))
   (:lambda (digits)

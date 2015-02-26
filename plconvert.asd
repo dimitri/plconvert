@@ -17,21 +17,26 @@
     ((:module src
               :components
               ((:file "package")
+               (:file "structs" :depends-on ("package"))
+
                (:module utils
                         :depends-on ("package")
                         :components ((:file "cli-parser")))
 
                (:module parser
-                        :depends-on ("package")
+                        :depends-on ("package" "structs")
                         :components ((:file "keywords")
                                      (:file "misc")
+                                     (:file "typename" :depends-on ("keywords"
+                                                                    "misc"))
                                      (:file "expr" :depends-on ("keywords"
                                                                 "misc"))
                                      (:file "query" :depends-on ("keywords"))
 
                                      (:file "fun" :depends-on ("keywords"
                                                                "misc"
-                                                               "query"))
+                                                               "query"
+                                                               "typename"))
 
                                      (:file "pbody" :depends-on ("keywords"
                                                                  "misc"

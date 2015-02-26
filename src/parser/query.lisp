@@ -12,4 +12,6 @@
                         (~ "delete"))
                     (* (or comments (not ";")))
                     ";")
-  (:destructure (ws c q sc) (declare (ignore ws)) (text c (uncomment q) sc)))
+  (:destructure (ws c q sc)
+                (declare (ignore ws))
+                (list :query (text c (uncomment q) sc))))
