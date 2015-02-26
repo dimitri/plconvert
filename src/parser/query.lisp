@@ -4,6 +4,10 @@
 
 (in-package #:plconvert.parser)
 
+(defun uncomment (query)
+  "query contains :comment bits, get rid'of em"
+  (remove :comment query))
+
 (defrule query (and ignore-whitespace
                     (or (~ "with")
                         (~ "select")
@@ -14,4 +18,4 @@
                     ";")
   (:destructure (ws c q sc)
                 (declare (ignore ws))
-                (list :query (text c (uncomment q) sc))))
+                (make-query :sql (text c (uncomment q) sc))))

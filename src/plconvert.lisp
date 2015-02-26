@@ -29,7 +29,7 @@
   (mapcar #'parse-file (uiop:directory-files pathname)))
 
 (defun check-file (pathname)
-  (length (rest (third (parse-file pathname)))))
+  (length (package-body-object-list (parse-file pathname))))
 
 (defun check-directory-files (pathname)
   (let ((summary

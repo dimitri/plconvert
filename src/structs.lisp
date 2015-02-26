@@ -25,6 +25,37 @@
 
 (defstruct proc name arg-list code)
 
+(defstruct package-body qname object-list)
+
+(defstruct assignment name value)
+
+(defstruct tcl command)
+
+(defstruct pl-if cond then-body elsif-list else-body)
+(defstruct pl-elsif cond body)
+
+(defstruct pl-for var set body)
+(defstruct pl-forall var set body)
+(defstruct pl-for-range start end)
+
+(defstruct pl-case expr when-list else-body)
+(defstruct pl-case-when cond body)
+
+(defstruct pl-continue cond)
+
+(defstruct pl-funcall name arg-list)
+
+(defstruct pl-open name funcall query)
+(defstruct pl-fetch qname expr)
+(defstruct pl-close qname)
+
+(defstruct pl-exception when-list)
+(defstruct pl-exception-when cond body)
+
+(defstruct pl-return value)
+(defstruct pl-raise exception)
+
+(defstruct query sql)
 
 ;;;
 ;;; Some basic printing for the debugging
@@ -49,7 +80,7 @@
 (defmethod print-object ((funarg funarg) stream)
   (print-unreadable-object (funarg stream :type t :identity t)
     (with-slots (name type mode default) funarg
-      (format stream "~@[~a~] ~a ~a~@[DEFAULT ~a~]"
+      (format stream "~@[~a~] ~a ~a~@[DEFAULT ~s~]"
               (string-upcase mode)
               name
               (data-type-to-string type)

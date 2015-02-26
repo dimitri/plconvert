@@ -16,9 +16,6 @@
                  ignore-whitespace)
   (:destructure (ws1 op ws2) (declare (ignore ws1 ws2)) op))
 
-(defrule var  (or dollar-varname varname-%option maybe-qualified-namestring)
-  (:lambda (x) (list :var x)))
-
 (defrule funexpr-dot-accessor (and funexpr "." namestring)
   (:lambda (x)
     (destructuring-bind (fun dot slotname) x

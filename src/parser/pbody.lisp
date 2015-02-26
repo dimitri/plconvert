@@ -15,8 +15,7 @@
   (:lambda (package)
     (destructuring-bind (c-o-r name as funs end n sc ws sl) package
       (declare (ignore c-o-r as end n sc ws sl))
-      (list :package name
-            `(:functions ,@funs)))))
+      (make-package-body :qname name :object-list funs))))
 
 (defrule procedure (and kw-procedure
                         namestring

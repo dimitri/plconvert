@@ -36,7 +36,7 @@
   (:lambda (x)
     (destructuring-bind (dec beg body except end sc) x
       (declare (ignore beg end sc))
-      (list :block (list :declarations dec :body body :exception except)))))
+      (make-code :decl-list dec :body body :exception except))))
 
 (defrule function-block (and declarations
                              kw-begin body
@@ -120,13 +120,13 @@
   (:lambda (assign)
     (destructuring-bind (ws1 varname ws2 eq ws3 rhs ws4 sc) assign
       (declare (ignore eq ws1 ws2 ws3 ws4 sc))
-      (list :assign (list varname rhs)))))
+      (make-assignment :name varname :value rhs))))
 
 (defrule tcl (and (or kw-commit kw-rollback) ";")
   (:lambda (tcl)
     (destructuring-bind (order sc) tcl
       (declare (ignore sc))
-      order)))
+      (make-tcl :command order))))
 
 (defrule control-block (or block-if block-for block-forall block-case))
 
@@ -139,11 +139,14 @@
   (:lambda (block-if)
     (destructuring-bind (i1 e th then elsif else end i2 sc) block-if
       (declare (ignore i1 th end i2 sc))
-      `(:if ,e (:then ,then) ,@elsif ,@(when else (cdr else))))))
+      (make-pl-if :cond e
+                  :then-body then
+                  :elsif-list elsif
+                  :else-body (cdr else)))))
 
 (defrule block-elsif (and kw-elsif expr kw-then body)
   (:destructure (elsif expr then body) (declare (ignore elsif then))
-                `(:elsif ,expr ,body)))
+                (make-pl-elsif :cond expr :body body)))
 
 (defrule block-for (and kw-for namestring kw-in (or funexpr query for-range)
                         kw-loop
@@ -153,20 +156,20 @@
   (:lambda (block-for)
     (destructuring-bind (for var in set loop body e l sc) block-for
       (declare (ignore for in loop e l sc))
-      `(:for ,var :in ,set :loop ,body))))
+      (make-pl-for :var var :set set :body body))))
 
 (defrule for-range (and expr ignore-whitespace ".." ignore-whitespace expr)
-  (:destructure (begin ws1 to ws2 end) (declare (ignore to ws1 ws2))
-                (list :range begin end)))
+  (:destructure (start ws1 to ws2 end) (declare (ignore to ws1 ws2))
+                (make-pl-for-range :start start :end end)))
 
 (defrule block-forall (and kw-forall namestring kw-in for-range query)
   (:destructure (forall var in range query)
                 (declare (ignore forall in))
-                `(:forall ,var :in ,range :query ,query)))
+                (make-pl-forall :var var :set range :body query)))
 
 (defrule continue (and kw-continue (? (and kw-when expr)) ";")
   (:destructure (c w sc) (declare (ignore c sc))
-                `(:continue ,@ (when w (list :when (cdr w))))))
+                (make-pl-continue :cond (cdr w))))
 
 (defrule block-case (and kw-case (? expr)
                          (+ case-when)
@@ -175,12 +178,13 @@
                          ";")
   (:lambda (block-case)
     (destructuring-bind (c1 e1 when else end c2 sc) block-case
-      (declare (ignore c1 e1 end c2 sc))
-      `(:case ,@when
-         ,@(when else (list :else (cdr else)))))))
+      (declare (ignore c1 end c2 sc))
+      (make-pl-case :expr e1 :when-list when :else-body (cdr else)))))
 
 (defrule case-when (and kw-when expr kw-then (or body statement))
-  (:destructure (w expr then body) (declare (ignore w then)) `(:when ,expr ,body)))
+  (:destructure (w expr then body)
+                (declare (ignore w then))
+                (make-pl-case-when :cond expr :body body)))
 
 (defrule fcall-arglist (and "(" (? fcall-args) ")")
   (:destructure (open args close) (declare (ignore open close)) args))
@@ -201,20 +205,21 @@
   (:lambda (funcall)
     (destructuring-bind (ws1 fname ws2 args) funcall
       (declare (ignore ws1 ws2))
-      (list :funcall fname args))))
+      (make-pl-funcall :name fname :arg-list args))))
 
 (defrule funcall (and funexpr ignore-whitespace ";")
   (:destructure (fun ws sc) (declare (ignore ws sc)) fun))
 
-(defun uncomment (query)
-  "query contains :comment bits, get rid'of em"
-  (remove :comment query))
+(defrule open-cursor (and kw-open (or cursor-for-query cursor-funcall))
+  (:destructure (o cursor) (declare (ignore o)) cursor))
 
-(defrule open-cursor (and kw-open (or cursor-for-query funcall))
-  (:destructure (o cursor) (declare (ignore o)) `(:open ,@cursor)))
+(defrule cursor-funcall funcall
+  (:lambda (x) (make-pl-open :funcall x)))
 
 (defrule cursor-for-query (and namestring kw-for query)
-  (:destructure (name for q) (declare (ignore for)) (list name q)))
+  (:destructure (name for q)
+                (declare (ignore for))
+                (make-pl-open :name name :query q)))
 
 (defrule fetch-cursor (and kw-fetch maybe-qualified-namestring
                            kw-bulk kw-collect kw-into maybe-qualified-namestring
@@ -222,24 +227,37 @@
   (:lambda (x)
     (destructuring-bind (fetch expr bulk collect into var sc) x
       (declare (ignore fetch bulk collect into sc))
-      `(:fetch :into ,var ,expr))))
+      (make-pl-fetch :qname var :expr expr))))
 
 (defrule close-cursor (and kw-close maybe-qualified-namestring ";")
-  (:destructure (close name sc) (declare (ignore close sc)) `(:close ,name)))
+  (:destructure (close name sc)
+                (declare (ignore close sc))
+                (make-pl-close :qname name)))
 
-(defrule exception (and kw-exception (+ when-exception)))
+(defrule exception (and kw-exception (+ when-exception))
+  (:destructure (exception when-list)
+                (declare (ignore exception))
+                (make-pl-exception :when-list when-list)))
 
 (defrule when-exception (and kw-when maybe-qualified-namestring
-                             kw-then exception-body))
+                             kw-then exception-body)
+  (:lambda (when-exception)
+    (destructuring-bind (w cond then body) when-exception
+      (declare (ignore w then))
+      (make-pl-exception-when :cond cond :body body))))
 
 (defrule exception-body (+ (or statement tcl funcall
                                assignment return control-block)))
 
 (defrule return (and kw-return expr ";")
-  (:destructure (ret label sc) (declare (ignore ret sc)) (cons :return label)))
+  (:destructure (ret retval sc)
+                (declare (ignore ret sc))
+                (make-pl-return :value retval)))
 
 (defrule raise (and kw-raise maybe-qualified-namestring ";")
-  (:destructure (raise name sc) (declare (ignore raise sc)) (cons :raise name)))
+  (:destructure (raise name sc)
+                (declare (ignore raise sc))
+                (make-pl-raise :exception name)))
 
 (defrule exit (and kw-exit ";") (:constant :exit))
 

@@ -46,6 +46,9 @@
 (defrule dollar-varname (and "$$" namestring) (:text t))
 (defrule varname-%option (and namestring "%" namestring) (:text t))
 
+(defrule var  (or dollar-varname varname-%option maybe-qualified-namestring)
+  (:lambda (x) (list :var x)))
+
 (defrule quoted-text (and "'" (* (or double-quote (not "'"))) "'")
   (:destructure (open text close) (declare (ignore open close)) (text text)))
 

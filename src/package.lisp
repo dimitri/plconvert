@@ -48,7 +48,107 @@
            #:make-proc
            #:proc-name
            #:proc-arg-list
-           #:proc-code))
+           #:proc-code
+
+           #:package-body
+           #:make-package-body
+           #:package-body-qname
+           #:package-body-object-list
+
+           #:assignment
+           #:make-assignment
+           #:assignment-name
+           #:assignment-value
+
+           #:tcl
+           #:make-tcl
+           #:tcl-command
+
+           #:pl-if
+           #:make-pl-if
+           #:pl-if-cond
+           #:pl-if-then-body
+           #:pl-if-else-body
+
+           #:pl-elsif
+           #:make-pl-elsif
+           #:pl-elsif-cond
+           #:pl-elsif-body
+
+           #:pl-for
+           #:make-pl-for
+           #:pl-for-var
+           #:pl-for-set
+           #:pl-for-body
+
+           #:pl-forall
+           #:make-pl-forall
+           #:pl-forall-var
+           #:pl-forall-set
+           #:pl-forall-body
+
+           #:pl-for-range
+           #:make-pl-for-range
+           #:pl-for-range-start
+           #:pl-for-range-end
+
+           #:pl-case
+           #:make-pl-case
+           #:pl-case-expr
+           #:pl-case-when-list
+           #:pl-case-else-body
+
+           #:pl-case-when
+           #:make-pl-case-when
+           #:pl-case-cond
+           #:pl-case-body
+
+           #:pl-continue
+           #:make-pl-continue
+           #:pl-continue-cond
+
+           #:pl-funcall
+           #:make-pl-funcall
+           #:pl-funcall-name
+           #:pl-funcall-arg-list
+
+           #:pl-open
+           #:make-pl-open
+           #:pl-open-name
+           #:pl-open-query
+           #:pl-open-funcall
+
+           #:pl-fetch
+           #:make-pl-fetch
+           #:pl-fetch-qname
+           #:pl-fetch-expr
+
+           #:pl-close
+           #:make-pl-close
+           #:pl-close-qname
+
+           #:pl-exception
+           #:make-pl-exception
+           #:pl-exception-when-list
+
+           #:pl-exception-when
+           #:make-pl-exception-when
+           #:pl-exception-when-cond
+           #:pl-exception-when-body
+
+           #:pl-return
+           #:make-pl-return
+           #:pl-return-value
+
+           #:pl-raise
+           #:make-pl-raise
+           #:pl-raise-exception
+
+           #:query
+           #:make-query
+           #:query-sql
+
+           ))
 
 (defpackage #:plconvert.parser
   (:use #:cl #:esrap #:plconvert.structs)
