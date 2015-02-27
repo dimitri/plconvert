@@ -17,7 +17,8 @@
                 (make-data-type :cname name
                                 :copy-from (second template))))
 
-(defrule typename-simple column-name)
+(defrule typename-simple column-name
+  (:lambda (x) (make-data-type :cname x)))
 
 (defrule typmod (and "("
                      ignore-whitespace dec-number ignore-whitespace
