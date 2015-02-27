@@ -39,6 +39,18 @@
             (t
              (make-qname :schema nil :package nil :name a))))))
 
+(defrule column-name (and namestring
+                          (? (and "." namestring))
+                          (? (and "." namestring)))
+  (:lambda (cn)
+    (destructuring-bind (a b c) cn
+      (cond ((and a b c)
+             (make-cname :schema a :relname (second b) :attribute (second c)))
+            ((and a b)
+             (make-cname :schema nil :relname a :attribute (second b)))
+            (t
+             (make-cname :schema nil :relname nil :attribute a))))))
+
 (defrule dec-number (and (? "-") (+ (digit-char-p character)))
   (:lambda (digits)
     (parse-integer (text digits))))

@@ -6,21 +6,18 @@
 
 (defrule typename (or typename-copied-from typename-typmod typename-simple))
 
-(defrule typename-typmod (and maybe-qualified-namestring typmod)
+(defrule typename-typmod (and column-name typmod)
   (:destructure (name typmod)
-                (make-data-type :qname name
+                (make-data-type :cname name
                                 :scale (getf typmod :scale)
                                 :precision (getf typmod :precision))))
 
-(defrule typename-copied-from (and maybe-qualified-namestring
-                                   (and "%" namestring))
+(defrule typename-copied-from (and column-name (and "%" namestring))
   (:destructure (name template)
-                (make-data-type :qname name
+                (make-data-type :cname name
                                 :copy-from (second template))))
 
-(defrule typename-simple maybe-qualified-namestring
-  (:lambda (x)
-    (make-data-type :qname x)))
+(defrule typename-simple column-name)
 
 (defrule typmod (and "("
                      ignore-whitespace dec-number ignore-whitespace

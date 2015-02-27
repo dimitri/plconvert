@@ -12,7 +12,9 @@
 
 (defstruct qname schema package name)
 
-(defstruct data-type qname copy-from scale precision)
+(defstruct cname schema relname attribute)
+
+(defstruct data-type cname copy-from scale precision)
 
 (defstruct funarg name type mode default)
 
@@ -68,18 +70,26 @@
 ;;;
 ;;; Some basic printing for the debugging
 ;;;
+(defun cname-to-string (cname)
+  (with-slots (schema relname attribute) cname
+    (format nil "~@[~a.~]~@[~a.~]~a" schema relname attribute)))
+
 (defun qname-to-string (qname)
   (with-slots (schema package name) qname
     (format nil "~@[~a.~]~@[~a.~]~a" schema package name)))
+
+(defmethod print-object ((cname cname) stream)
+  (print-unreadable-object (cname stream :type t :identity t)
+    (format stream "~a" (cname-to-string cname))))
 
 (defmethod print-object ((qname qname) stream)
   (print-unreadable-object (qname stream :type t :identity t)
     (format stream "~a" (qname-to-string qname))))
 
 (defun data-type-to-string (data-type)
-  (with-slots (qname copy-from scale precision) data-type
+  (with-slots (cname copy-from scale precision) data-type
     (format nil "~a~@[%~a~]~@[(~a~@[,~a~])~]"
-            (qname-to-string qname) copy-from scale precision)))
+            (cname-to-string cname) copy-from scale precision)))
 
 (defmethod print-object ((data-type data-type) stream)
   (print-unreadable-object (data-type stream :type t :identity t)

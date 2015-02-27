@@ -6,9 +6,15 @@
            #:qname-package
            #:qname-name
 
+           #:cname
+           #:make-cname
+           #:cname-schema
+           #:cname-relname
+           #:cname-attribute
+
            #:data-type
            #:make-data-type
-           #:data-type-qname
+           #:data-type-cname
            #:data-type-copy-from
            #:data-type-scale
            #:data-type-precision
