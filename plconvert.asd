@@ -29,8 +29,14 @@
                                      (:file "misc")
                                      (:file "typename" :depends-on ("keywords"
                                                                     "misc"))
+
                                      (:file "expr" :depends-on ("keywords"
                                                                 "misc"))
+
+                                     (:file "declarations" :depends-on ("keywords"
+                                                                        "misc"
+                                                                        "exp"))
+
                                      (:file "query" :depends-on ("keywords"))
 
                                      (:file "fun" :depends-on ("keywords"
