@@ -35,7 +35,7 @@
 
                                      (:file "declarations" :depends-on ("keywords"
                                                                         "misc"
-                                                                        "exp"))
+                                                                        "expr"))
 
                                      (:file "query" :depends-on ("keywords"))
 

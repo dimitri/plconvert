@@ -100,10 +100,13 @@
       (format stream "~a ~a~@[ := ~a~]"
               name (data-type-to-string type) default))))
 
-(defmethod print-object ((decl-type decl-type) stream)
-  (print-unreadable-object (decl-type stream :type t :identity t)
-    (with-slots (name cursor-p table index-by) decl-type
-      (if cursor-p
-          (format stream "~a IS REF CURSOR;" name)
-          (format stream "~a IS TABLE OF ~a~@[ INDEX BY ~a~]"
-                  name (qname-to-string table) index-by)))))
+(defmethod print-object ((decl-type-cursor decl-type-cursor) stream)
+  (print-unreadable-object (decl-type-cursor stream :type t :identity t)
+    (with-slots (name) decl-type-cursor
+      (format stream "~a IS REF CURSOR;" name))))
+
+(defmethod print-object ((decl-type-table decl-type-table) stream)
+  (print-unreadable-object (decl-type-table stream :type t :identity t)
+    (with-slots (name table index-by) decl-type-table
+      (format stream "~a IS TABLE OF ~a~@[ INDEX BY ~a~]"
+              name (qname-to-string table) index-by))))
