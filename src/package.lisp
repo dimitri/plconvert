@@ -148,6 +148,10 @@
            #:make-query
            #:query-sql
 
+           #:expression
+           #:make-expression
+           #:expression-value
+
            ))
 
 (defpackage #:plconvert.parser

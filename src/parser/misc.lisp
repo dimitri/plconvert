@@ -43,11 +43,17 @@
   (:lambda (digits)
     (parse-integer (text digits))))
 
-(defrule dollar-varname (and "$$" namestring) (:text t))
-(defrule varname-%option (and namestring "%" namestring) (:text t))
+(defrule dollar-varname (and "$$" namestring)
+  (:destructure (dollar name)
+                (declare (ignore dollar))
+                (list 'compiler-variable name)))
 
-(defrule var  (or dollar-varname varname-%option maybe-qualified-namestring)
-  (:lambda (x) (list :var x)))
+(defrule varname-%option (and namestring "%" namestring)
+  ;; my_prov_status_list%ROWCOUNT
+  ;; (rowcount my_prov_status_list)
+  (:destructure (varname option) (list option varname)))
+
+(defrule var  (or dollar-varname varname-%option maybe-qualified-namestring))
 
 (defrule quoted-text (and "'" (* (or double-quote (not "'"))) "'")
   (:destructure (open text close) (declare (ignore open close)) (text text)))

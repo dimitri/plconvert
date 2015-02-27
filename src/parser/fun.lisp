@@ -19,7 +19,7 @@
                        (? (or in-out kw-in kw-out))
                        ignore-whitespace
                        (? typename)
-                       (? (and kw-default expr))
+                       (? (and kw-default expression))
                        ignore-whitespace)
   (:lambda (params)
     (destructuring-bind (ws1 name ws2 mode ws3 type default ws4) params
@@ -74,7 +74,7 @@
 
 (defrule declare-varname (or dollar-varname varname-%option namestring))
 
-(defrule default-value (and ignore-whitespace ":=" ignore-whitespace expr)
+(defrule default-value (and ignore-whitespace ":=" ignore-whitespace expression)
   (:destructure (ws1 a ws2 e) (declare (ignore a ws1 ws2)) e))
 
 (defrule type-declaration (and kw-type namestring
@@ -85,11 +85,11 @@
   (:lambda (x)
     (destructuring-bind (typ name is table of table-name ws sc) x
       (declare (ignore typ is table of ws sc))
-      (cond ((eq :var (first table-name))
+      (cond ((and (consp table-name) (eq :hash (first table-name)))
              (make-decl-type :name name :table (second table-name)))
 
-            ((eq :hash (first table-name))
-             (make-decl-type :name name :table (second table-name)))))))
+            (t                          ; var
+             (make-decl-type :name name :table table-name))))))
 
 (defrule type-definition (or index-by var))
 
@@ -115,7 +115,7 @@
 (defrule assignment (and ignore-whitespace
                          (or funexpr-dot-accessor funexpr var)
                          ignore-whitespace ":=" ignore-whitespace
-                         expr
+                         expression
                          ignore-whitespace ";")
   (:lambda (assign)
     (destructuring-bind (ws1 varname ws2 eq ws3 rhs ws4 sc) assign
@@ -130,7 +130,7 @@
 
 (defrule control-block (or block-if block-for block-forall block-case))
 
-(defrule block-if (and kw-if expr
+(defrule block-if (and kw-if expression
                        kw-then body
                        (* block-elsif)
                        (? (and kw-else body))
@@ -144,7 +144,7 @@
                   :elsif-list elsif
                   :else-body (cdr else)))))
 
-(defrule block-elsif (and kw-elsif expr kw-then body)
+(defrule block-elsif (and kw-elsif expression kw-then body)
   (:destructure (elsif expr then body) (declare (ignore elsif then))
                 (make-pl-elsif :cond expr :body body)))
 
@@ -158,8 +158,10 @@
       (declare (ignore for in loop e l sc))
       (make-pl-for :var var :set set :body body))))
 
-(defrule for-range (and expr ignore-whitespace ".." ignore-whitespace expr)
-  (:destructure (start ws1 to ws2 end) (declare (ignore to ws1 ws2))
+(defrule dot-dot (and ignore-whitespace ".." ignore-whitespace) (:constant '|..|))
+
+(defrule for-range (and expression dot-dot expression)
+  (:destructure (start to end) (declare (ignore to))
                 (make-pl-for-range :start start :end end)))
 
 (defrule block-forall (and kw-forall namestring kw-in for-range query)
@@ -167,11 +169,11 @@
                 (declare (ignore forall in))
                 (make-pl-forall :var var :set range :body query)))
 
-(defrule continue (and kw-continue (? (and kw-when expr)) ";")
+(defrule continue (and kw-continue (? (and kw-when expression)) ";")
   (:destructure (c w sc) (declare (ignore c sc))
                 (make-pl-continue :cond (cdr w))))
 
-(defrule block-case (and kw-case (? expr)
+(defrule block-case (and kw-case (? expression)
                          (+ case-when)
                          (? (and kw-else (or body statement)))
                          kw-end kw-case
@@ -181,7 +183,7 @@
       (declare (ignore c1 end c2 sc))
       (make-pl-case :expr e1 :when-list when :else-body (cdr else)))))
 
-(defrule case-when (and kw-when expr kw-then (or body statement))
+(defrule case-when (and kw-when expression kw-then (or body statement))
   (:destructure (w expr then body)
                 (declare (ignore w then))
                 (make-pl-case-when :cond expr :body body)))
@@ -195,7 +197,7 @@
 (defrule another-fcall-arg (and "," fcall-arg)
   (:destructure (c arg) (declare (ignore c)) arg))
 
-(defrule fcall-arg (and ignore-whitespace expr ignore-whitespace)
+(defrule fcall-arg (and ignore-whitespace expression ignore-whitespace)
   (:destructure (ws1 arg ws2) (declare (ignore ws1 ws2)) arg))
 
 (defrule funexpr (and ignore-whitespace
@@ -225,9 +227,9 @@
                            kw-bulk kw-collect kw-into maybe-qualified-namestring
                            ";")
   (:lambda (x)
-    (destructuring-bind (fetch expr bulk collect into var sc) x
+    (destructuring-bind (fetch name bulk collect into var sc) x
       (declare (ignore fetch bulk collect into sc))
-      (make-pl-fetch :qname var :expr expr))))
+      (make-pl-fetch :qname var :expr name))))
 
 (defrule close-cursor (and kw-close maybe-qualified-namestring ";")
   (:destructure (close name sc)
@@ -249,7 +251,7 @@
 (defrule exception-body (+ (or statement tcl funcall
                                assignment return control-block)))
 
-(defrule return (and kw-return expr ";")
+(defrule return (and kw-return expression ";")
   (:destructure (ret retval sc)
                 (declare (ignore ret sc))
                 (make-pl-return :value retval)))

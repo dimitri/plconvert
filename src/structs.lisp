@@ -57,6 +57,8 @@
 
 (defstruct query sql)
 
+(defstruct expression value)
+
 ;;;
 ;;; Some basic printing for the debugging
 ;;;
