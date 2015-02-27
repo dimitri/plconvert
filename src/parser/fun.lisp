@@ -77,19 +77,30 @@
 (defrule default-value (and ignore-whitespace ":=" ignore-whitespace expression)
   (:destructure (ws1 a ws2 e) (declare (ignore a ws1 ws2)) e))
 
-(defrule type-declaration (and kw-type namestring
-                               kw-is kw-table kw-of
-                               type-definition
-                               ignore-whitespace
-                               ";")
+(defrule type-declaration (or type-table-of
+                              type-ref-cursor
+                              type-record))
+
+(defrule type-table-of (and kw-type namestring
+                            kw-is kw-table kw-of
+                            type-definition
+                            ignore-whitespace
+                            ";")
   (:lambda (x)
     (destructuring-bind (typ name is table of table-name ws sc) x
       (declare (ignore typ is table of ws sc))
       (cond ((and (consp table-name) (eq :hash (first table-name)))
-             (make-decl-type :name name :table (second table-name)))
+             (make-decl-type-table :name name
+                                   :table (getf (cdr table-name) :key)
+                                   :index-by (getf (cdr table-name) :value)))
 
             (t                          ; var
-             (make-decl-type :name name :table table-name))))))
+             (make-decl-type-table :name name :table table-name))))))
+
+(defrule type-ref-cursor (and kw-type namestring kw-is kw-ref kw-cursor sc)
+  (:destructure (typ name is ref cursor sc)
+                (declare (ignore typ is ref cursor sc))
+                (make-decl-type-cursor :name name)))
 
 (defrule type-definition (or index-by var))
 
@@ -97,6 +108,25 @@
   (:destructure (type-of-value i b type-of-key)
                 (declare (ignore i b))
                 `(:hash :key ,type-of-key :value ,type-of-value)))
+
+(defrule type-record (and kw-type namestring kw-is kw-record
+                          type-record-attribute-list
+                          sc)
+  (:destructure (type name is rec att-list sc)
+                (declare (ignore type is rec sc))
+                (make-decl-type-record :name name :att-list att-list)))
+
+(defrule type-record-attribute-list (and o-p (+ type-record-attribute) c-p)
+  (:destructure (o att-list c) (declare (ignore o c)) att-list))
+
+(defrule type-record-attribute (and namestring
+                                    ignore-whitespace
+                                    typename
+                                    (? comma))
+  (:lambda (x)
+    (destructuring-bind (name ws type c) x
+      (declare (ignore ws c))
+      (make-decl-var :name name :type type))))
 
 (defrule body    (+ (or block
                         assignment
@@ -197,8 +227,15 @@
 (defrule another-fcall-arg (and "," fcall-arg)
   (:destructure (c arg) (declare (ignore c)) arg))
 
-(defrule fcall-arg (and ignore-whitespace expression ignore-whitespace)
-  (:destructure (ws1 arg ws2) (declare (ignore ws1 ws2)) arg))
+(defrule fcall-arg (or fcall-named-arg fcall-arg-expr))
+
+(defrule fcall-arg-expr expression)
+
+(defrule => "=>" (:constant '=>))
+
+(defrule fcall-named-arg (and expression => expression)
+  (:destructure (arg => name) (declare (ignore =>))
+                (make-assignment :name arg :value name)))
 
 (defrule funexpr (and ignore-whitespace
                       maybe-qualified-namestring

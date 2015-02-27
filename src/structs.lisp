@@ -17,7 +17,11 @@
 (defstruct funarg name type mode default)
 
 (defstruct decl-var name type default)
-(defstruct decl-type name table index-by)
+(defstruct decl-fun name arg-list ret-type)
+(defstruct decl-proc name arg-list)
+(defstruct decl-type-table name table index-by)
+(defstruct decl-type-cursor name)
+(defstruct decl-type-record name att-list)
 
 (defstruct code decl-list body exception)
 
@@ -26,6 +30,8 @@
 (defstruct proc name arg-list code)
 
 (defstruct package-body qname object-list)
+
+(defstruct package-spec qname decl-list )
 
 (defstruct assignment name value)
 
@@ -96,6 +102,8 @@
 
 (defmethod print-object ((decl-type decl-type) stream)
   (print-unreadable-object (decl-type stream :type t :identity t)
-    (with-slots (name table index-by) decl-type
-      (format stream "~a IS TABLE OF ~a~@[ INDEX BY ~a~]"
-              name (qname-to-string table) index-by))))
+    (with-slots (name cursor-p table index-by) decl-type
+      (if cursor-p
+          (format stream "~a IS REF CURSOR;" name)
+          (format stream "~a IS TABLE OF ~a~@[ INDEX BY ~a~]"
+                  name (qname-to-string table) index-by)))))

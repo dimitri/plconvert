@@ -57,9 +57,6 @@
 
 (defrule ¦¦ (and ignore-whitespace "||" ignore-whitespace) (:constant '¦¦))
 
-(defrule o (and ignore-whitespace "(" ignore-whitespace)  (:constant nil))
-(defrule c (and ignore-whitespace ")" ignore-whitespace)  (:constant nil))
-
 (defrule expr    (and bool (* (or exp-and exp-or))) (:function simplify))
 (defrule exp-and (and op-and bool))
 (defrule exp-or  (and op-or bool))
@@ -91,7 +88,7 @@
 
 (defrule primary (or parens case-expr term-is-null not-term term))
 
-(defrule parens  (and o expr c)
+(defrule parens  (and o-p expr c-p)
   (:destructure (o e c) (declare (ignore o c)) (list e)))
 
 (defrule not-term (and op-not primary))
@@ -129,4 +126,6 @@
 (defrule statement (and expr ignore-whitespace ";")
   (:destructure (e ws sc) (declare (ignore ws sc)) e))
 
-(defrule expression expr (:lambda (expr) (make-expression :value expr)))
+(defrule expression (and ignore-whitespace expr ignore-whitespace)
+  (:destructure (ws1 expr ws2) (declare (ignore ws1 ws2))
+                (make-expression :value expr)))

@@ -37,7 +37,11 @@
                                                                "misc"
                                                                "query"
                                                                "typename"))
-
+                                     (:file "pspec" :depends-on ("keywords"
+                                                                 "misc"
+                                                                 "expr"
+                                                                 "query"
+                                                                 "fun"))
                                      (:file "pbody" :depends-on ("keywords"
                                                                  "misc"
                                                                  "expr"

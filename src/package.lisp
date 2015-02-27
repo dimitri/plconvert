@@ -20,16 +20,36 @@
            #:funarg-mode
            #:funarg-default
 
+           #:decl-fun
+           #:make-decl-fun
+           #:decl-fun-name
+           #:decl-fun-arg-list
+           #:decl-fun-ret-type
+
+           #:decl-proc
+           #:make-decl-proc
+           #:decl-proc-name
+           #:decl-proc-arg-list
+
            #:decl-var
            #:make-decl-var
            #:decl-var-name
            #:decl-var-type
            #:decl-var-default
 
-           #:decl-type
-           #:make-decl-type
-           #:decl-type-name
            #:decl-type-table
+           #:make-decl-type-table
+           #:decl-type-table-name
+           #:decl-type-table-table
+           #:decl-type-table-index-by
+
+           #:decl-type-cursor
+           #:make-decl-type-cursor
+           #:decl-type-cursor-name
+
+           #:decl-type-record
+           #:make-decl-type-record
+           #:decl-type-record-name
 
            #:code
            #:make-code
@@ -54,6 +74,11 @@
            #:make-package-body
            #:package-body-qname
            #:package-body-object-list
+
+           #:package-spec
+           #:make-package-spec
+           #:package-spec-qname
+           #:package-spec-decl-list
 
            #:assignment
            #:make-assignment
@@ -156,7 +181,8 @@
 
 (defpackage #:plconvert.parser
   (:use #:cl #:esrap #:plconvert.structs)
-  (:export #:parse-package-body))
+  (:export #:parse-package-body
+           #:parse-package-spec))
 
 (defpackage #:plconvert
   (:use #:cl #:plconvert.parser #:plconvert.structs)

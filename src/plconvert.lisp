@@ -21,7 +21,12 @@
   "Parse given filename."
   (ecase (file-type pathname)
     (:package-body
+     (format t "Parsing package body from: ~s~%" pathname)
      (parse-package-body
+      (read-file-into-string pathname :external-format external-format)))
+    (:package-spec
+     (format t "Parsing package spec from: ~s~%" pathname)
+     (parse-package-spec
       (read-file-into-string pathname :external-format external-format)))))
 
 (defun parse-directory-files (pathname)
@@ -29,12 +34,14 @@
   (mapcar #'parse-file (uiop:directory-files pathname)))
 
 (defun check-file (pathname)
-  (length (package-body-object-list (parse-file pathname))))
+  (let ((ast (parse-file pathname)))
+    (length (etypecase ast
+              (package-body (package-body-object-list ast))
+              (package-spec (package-spec-decl-list ast))))))
 
 (defun check-directory-files (pathname)
   (let ((summary
          (mapcar (lambda (pathname)
-                   (format t "Parsing definitions from file: ~s~%" pathname)
                    (list (file-type pathname)
                          (pathname-name pathname)
                          (check-file pathname)))

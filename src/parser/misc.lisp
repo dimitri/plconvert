@@ -51,7 +51,7 @@
 (defrule varname-%option (and namestring "%" namestring)
   ;; my_prov_status_list%ROWCOUNT
   ;; (rowcount my_prov_status_list)
-  (:destructure (varname option) (list option varname)))
+  (:destructure (varname % option) (declare (ignore %)) (list option varname)))
 
 (defrule var  (or dollar-varname varname-%option maybe-qualified-namestring))
 
@@ -59,3 +59,9 @@
   (:destructure (open text close) (declare (ignore open close)) (text text)))
 
 (defrule double-quote "''" (:constant "'"))
+
+(defrule sc (and ignore-whitespace ";" ignore-whitespace) (:constant ";"))
+(defrule comma (and ignore-whitespace "," ignore-whitespace) (:constant ","))
+(defrule o-p (and ignore-whitespace "(" ignore-whitespace)  (:constant nil))
+(defrule c-p (and ignore-whitespace ")" ignore-whitespace)  (:constant nil))
+
