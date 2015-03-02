@@ -119,4 +119,6 @@
   (print-unreadable-object (decl-type-table stream :type t :identity t)
     (with-slots (name table index-by) decl-type-table
       (format stream "~a IS TABLE OF ~a~@[ INDEX BY ~a~]"
-              name (qname-to-string table) index-by))))
+              (cname-to-string name)
+              (data-type-to-string table)
+              (when index-by (data-type-to-string index-by))))))

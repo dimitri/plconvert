@@ -41,20 +41,25 @@
   (:lambda (x)
     (destructuring-bind (typ name is table of table-name sc) x
       (declare (ignore typ is table of sc))
-      (cond ((and (consp table-name) (eq :hash (first table-name)))
-             (make-decl-type-table :name name
-                                   :table (getf (cdr table-name) :key)
-                                   :index-by (getf (cdr table-name) :value)))
+      (let ((name (make-cname :schema nil :relname nil :attribute name)))
+        (cond ((and (consp table-name) (eq :hash (first table-name)))
+               (make-decl-type-table :name name
+                                     :table (getf (cdr table-name) :key)
+                                     :index-by (getf (cdr table-name) :value)))
 
-            (t                          ; var
-             (make-decl-type-table :name name :table table-name))))))
+              (t                        ; var
+               (make-decl-type-table :name name
+                                     :table table-name
+                                     :index-by nil)))))))
 
 (defrule type-ref-cursor (and kw-type namestring kw-is kw-ref kw-cursor sc)
   (:destructure (typ name is ref cursor sc)
                 (declare (ignore typ is ref cursor sc))
-                (make-decl-type-cursor :name name)))
+                (make-decl-type-cursor :name (make-cname :schema nil
+                                                         :relname nil
+                                                         :attribute name))))
 
-(defrule type-definition (or index-by var))
+(defrule type-definition (or index-by typename))
 
 (defrule index-by (and typename kw-index kw-by typename)
   (:destructure (type-of-value i b type-of-key)
@@ -66,7 +71,10 @@
                           sc)
   (:destructure (type name is rec att-list sc)
                 (declare (ignore type is rec sc))
-                (make-decl-type-record :name name :att-list att-list)))
+                (make-decl-type-record :name (make-cname :schema nil
+                                                         :relname nil
+                                                         :attribute name)
+                                       :att-list att-list)))
 
 (defrule type-record-attribute-list (and o-p (+ type-record-attribute) c-p)
   (:destructure (o att-list c) (declare (ignore o c)) att-list))
@@ -78,4 +86,7 @@
   (:lambda (x)
     (destructuring-bind (name ws type c) x
       (declare (ignore ws c))
-      (make-decl-var :name name :type type))))
+      (make-decl-var :name (make-cname :schema nil
+                                       :relname name
+                                       :attribute name)
+                     :type type))))
