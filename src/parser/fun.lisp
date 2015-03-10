@@ -44,7 +44,7 @@
                        ignore-whitespace
                        (? (or in-out kw-in kw-out))
                        ignore-whitespace
-                       (? typename)
+                       typename
                        (? (and kw-default expression))
                        ignore-whitespace)
   (:lambda (params)
