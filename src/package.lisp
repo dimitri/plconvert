@@ -56,6 +56,7 @@
            #:decl-type-record
            #:make-decl-type-record
            #:decl-type-record-name
+           #:decl-type-record-att-list
 
            #:code
            #:make-code
@@ -99,6 +100,7 @@
            #:make-pl-if
            #:pl-if-cond
            #:pl-if-then-body
+           #:pl-if-elsif-list
            #:pl-if-else-body
 
            #:pl-elsif
@@ -131,8 +133,8 @@
 
            #:pl-case-when
            #:make-pl-case-when
-           #:pl-case-cond
-           #:pl-case-body
+           #:pl-case-when-cond
+           #:pl-case-when-body
 
            #:pl-continue
            #:make-pl-continue
@@ -183,6 +185,11 @@
            #:make-expression
            #:expression-value
 
+           #:comment
+           #:make-comment
+           #:comment-text
+           #:comment-single-line-p
+
            ))
 
 (defpackage #:plconvert.parser
@@ -193,6 +200,7 @@
 (defpackage #:plconvert
   (:use #:cl #:plconvert.parser #:plconvert.structs)
   (:import-from #:alexandria
+                #:appendf
                 #:read-file-into-string
                 #:read-file-into-byte-vector)
   (:import-from #:split-sequence

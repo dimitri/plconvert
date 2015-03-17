@@ -56,8 +56,14 @@
 
                (:file "parser-api" :depends-on ("package" "utils" "parser"))
 
+               (:module converter
+                        :depends-on ("package" "structs" "parser-api" "utils")
+                        :components ((:file "walk-apply")
+                                     (:file "convert" :depends-on ("walk-apply"))))
+
                (:file "plconvert" :depends-on ("package"
                                                "utils"
                                                "parser"
-                                               "parser-api"))))))
+                                               "parser-api"
+                                               "converter"))))))
 

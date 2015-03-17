@@ -47,3 +47,8 @@
                          (check-file pathname)))
                  (uiop:directory-files pathname))))
     (values summary (reduce #'+ (mapcar #'third summary)))))
+
+(defun convert-file (pathname)
+  "Convert a source file into a PL/pgSQL file."
+  (ecase (file-type pathname)
+    (:package-body (plsql-to-plpgsql (parse-file pathname)))))
