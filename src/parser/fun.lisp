@@ -96,7 +96,7 @@
       (make-pl-if :cond e
                   :then-body then
                   :elsif-list elsif
-                  :else-body (cdr else)))))
+                  :else-body (cadr else)))))
 
 (defrule block-elsif (and kw-elsif expression kw-then body)
   (:destructure (elsif expr then body) (declare (ignore elsif then))
@@ -135,7 +135,7 @@
   (:lambda (block-case)
     (destructuring-bind (c1 e1 when else end c2 sc) block-case
       (declare (ignore c1 end c2 sc))
-      (make-pl-case :expr e1 :when-list when :else-body (cdr else)))))
+      (make-pl-case :expr e1 :when-list when :else-body (cadr else)))))
 
 (defrule case-when (and kw-when expression kw-then (or body statement))
   (:destructure (w expr then body)

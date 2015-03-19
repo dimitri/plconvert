@@ -68,7 +68,7 @@
              (data-type    (walk-apply-helper (data-type-cname parsetree)))
 
              (code         (mapc #'walk-apply-helper (code-decl-list parsetree))
-                           (walk-apply-helper (code-body parsetree))
+                           (mapc #'walk-apply-helper (code-body parsetree))
                            (walk-apply-helper (code-exception parsetree)))
 
              (assignment   (walk-apply-helper (assignment-name parsetree))
