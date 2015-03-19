@@ -33,19 +33,24 @@ TODO - see about custom exceptions
   '((convert-data-type            . (cname))
     (out+return-to-returns-record . (fun))
     (set-ora-package              . (package-body package-specs))
-    (qualify-fun-and-proc-names   . (fun proc))))
+    (qualify-fun-and-proc-names   . (fun proc))
+    (funcall-to-perform           . (code
+                                     pl-if
+                                     pl-case pl-case-when
+                                     pl-exception-when))))
 
 (defun plsql-to-plpgsql (parsetree)
   "Convert raw parsetree to a PL/pgSQL compatible parse tree."
-  (let (*current-oracle-package*)
+  (let ((*current-oracle-package* nil))
     (walk-apply parsetree *convert-from-oracle*)
     parsetree))
 
 (defun set-ora-package (parsetree)
   "Get current package name for reuse later in the processing."
-  (setf *current-ora-package* (typecase parsetree
-                                (package-body (package-body-qname parsetree))
-                                (package-spec (package-spec-qname parsetree)))))
+  (setf *current-ora-package*
+        (typecase parsetree
+          (package-body (package-body-qname parsetree))
+          (package-spec (package-spec-qname parsetree)))))
 
 (defun qualify-fun-and-proc-names (parsetree)
   "Change function and procedure names into qualified names."
@@ -147,3 +152,27 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
 
           ;; now change the return type to "record"
           (setf (fun-ret-type fun) new-ret-type))))))
+
+(defun funcall-to-perform (parsetree)
+  "Change stray funcalls into perform nodes."
+  (flet ((replace-funcalls (list-of-nodes)
+           (loop :for rest :on list-of-nodes :by #'cdr
+              :when (typep (car rest) 'pl-funcall)
+              :do (setf (car rest)
+                        (make-pl-perform
+                         :name (pl-funcall-name (car rest))
+                         :arg-list (pl-funcall-arg-list (car rest)))))))
+
+    (typecase parsetree
+      (code    (replace-funcalls (code-body parsetree)))
+
+      (pl-if   (replace-funcalls (pl-if-then-body parsetree))
+               (replace-funcalls (pl-if-elsif-list parsetree))
+               (replace-funcalls (pl-if-else-body parsetree)))
+
+      (pl-case (replace-funcalls (pl-case-else-body parsetree)))
+
+      (pl-case-when (replace-funcalls (pl-case-when-body parsetree)))
+
+      (pl-exception-when
+       (replace-funcalls (pl-exception-when-body parsetree))))))

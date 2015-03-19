@@ -145,6 +145,11 @@
            #:pl-funcall-name
            #:pl-funcall-arg-list
 
+           #:pl-perform
+           #:make-pl-perform
+           #:pl-perform-name
+           #:pl-perform-arg-list
+
            #:pl-open
            #:make-pl-open
            #:pl-open-name
