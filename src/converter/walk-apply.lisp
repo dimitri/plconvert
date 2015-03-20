@@ -124,10 +124,11 @@
 
              (pl-raise     (walk-apply-helper (pl-raise-exception parsetree)))
 
+             (expression   (walk-apply-helper (expression-value parsetree)))
+
              ;; terminal elements: don't recurse here.
              (qname        nil)
              (cname        nil)
-             (expression   nil)
              (query        nil)
              (comment      nil))))
       (walk-apply-helper parsetree))))

@@ -26,11 +26,15 @@ TODO - see about custom exceptions
 (defvar *current-ora-package* nil
   "Defined when parsing a Package Body or a Package Specs node.")
 
+(defvar *current-package-spec* nil
+  "Current package spec (from the pks file) with global variable definitions.")
+
 (defvar *funs-with-out+return* '()
   "List of functions that needs tweeking their calling conventions.")
 
 (defvar *convert-from-oracle*
   '((convert-data-type            . (cname))
+    (process-package-vars         . (qname))
     (out+return-to-returns-record . (fun))
     (set-ora-package              . (package-body package-specs))
     (qualify-fun-and-proc-names   . (fun proc))
@@ -40,12 +44,17 @@ TODO - see about custom exceptions
                                      pl-case pl-case-when
                                      pl-exception-when))))
 
-(defun plsql-to-plpgsql (parsetree)
+(defun plsql-to-plpgsql (spec body)
   "Convert raw parsetree to a PL/pgSQL compatible parse tree."
-  (let ((*current-oracle-package* nil))
-    (walk-apply parsetree *convert-from-oracle*)
-    parsetree))
+  (let ((*current-oracle-package* nil)
+        (*current-package-spec* spec))
+    (walk-apply body *convert-from-oracle*)
+    (values body (collect-package-spec-variables spec))))
 
+;;;
+;;; The *current-ora-package* needs to be set so that we can qualify
+;;; function and proc names.
+;;;
 (defun set-ora-package (parsetree)
   "Get current package name for reuse later in the processing."
   (setf *current-ora-package*
@@ -126,6 +135,9 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
       (setf (cname-attribute cname)
             (gethash data-type *oracle-data-type-mapping* data-type)))))
 
+;;;
+;;; Fix output types of functions signatures and call sites.
+;;;
 (defun out+return-to-returns-record (fun)
   "In Oracle it's possible to have both OUT parameters and a return value,
    in PostgreSQL the return value is composed of the OUT parameters."
@@ -154,6 +166,9 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
           ;; now change the return type to "record"
           (setf (fun-ret-type fun) new-ret-type))))))
 
+;;;
+;;; Some Oracle funcalls needs to be converted into PERFORM nodes
+;;;
 (defun funcall-to-perform (parsetree)
   "Change stray funcalls into perform nodes."
   (flet ((replace-funcalls (list-of-nodes)
@@ -180,3 +195,51 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
 
       (pl-exception-when
        (replace-funcalls (pl-exception-when-body parsetree))))))
+
+;;;
+;;; Package Spec Variables
+;;;
+(defun collect-package-spec-variables (package-spec)
+  "Return a list of package variables names."
+  (let* ((pqname   (package-spec-qname package-spec))
+         (schema  (qname-package pqname))
+         (package (qname-name pqname)))
+    (mapcar (lambda (var)
+              (make-qname :schema schema
+                          :package package
+                          :name (decl-var-name var)))
+            (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))))
+
+;;;
+;;; TODO: switch this code to an upper level so that we can setf the qname
+;;; into its replacement node.
+;;;
+;;; With the current parsetree and given that walk-apply doesn't walk into
+;;; expressions it's not feasible, so first expressions have to be part of
+;;; the parse tree rather than their own list-based representation.
+;;;
+;;; We need to invent decicated structures to host the expressions, such as:
+;;;   - pl-expr-number
+;;;   - pl-expr-literal
+;;;   - pl-expr-is-null
+;;;   - pl-expr-case
+;;;   - pl-expr-case-when
+;;;   - pl-op
+;;;
+(defun process-package-vars (qname)
+  "Package variable references are unqualified qname that are declared in
+  *current-package-spec*, we need to do something about them."
+  (when (and (or (null (qname-schema qname))
+                 (string= (qname-schema qname)
+                          (qname-package *current-ora-package*)))
+             (or (null (qname-package qname))
+                 (string= (qname-package qname)
+                          (qname-name *current-ora-package*)))
+             (member (qname-name qname)
+                     (package-spec-decl-list *current-package-spec*)
+                     :key (lambda (decl)
+                            (when (decl-var-p decl)
+                              (decl-var-name decl)))
+                     :test #'string=))
+
+    (format t "Found a package variable: ~s~%" qname)))
