@@ -36,6 +36,7 @@ TODO - see about custom exceptions
     (qualify-fun-and-proc-names   . (fun proc))
     (funcall-to-perform           . (code
                                      pl-if
+                                     pl-for pl-forall
                                      pl-case pl-case-when
                                      pl-exception-when))))
 
@@ -173,6 +174,9 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
       (pl-case (replace-funcalls (pl-case-else-body parsetree)))
 
       (pl-case-when (replace-funcalls (pl-case-when-body parsetree)))
+
+      (pl-for     (replace-funcalls (pl-for-body parsetree)))
+      (pl-forall  (replace-funcalls (pl-forall-body parsetree)))
 
       (pl-exception-when
        (replace-funcalls (pl-exception-when-body parsetree))))))
