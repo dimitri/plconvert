@@ -209,7 +209,7 @@
       (declare (ignore w then))
       (make-pl-exception-when :cond cond :body body))))
 
-(defrule exception-body (+ (or statement tcl funcall
+(defrule exception-body (+ (or tcl statement funcall
                                assignment return control-block)))
 
 (defrule return (and kw-return expression sc)
