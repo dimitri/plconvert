@@ -58,7 +58,9 @@
 (defrule dollar-varname (and "$$" namestring)
   (:destructure (dollar name)
                 (declare (ignore dollar))
-                (list 'compiler-variable name)))
+                (make-qname :schema nil
+                            :package nil
+                            :name (format nil "$$~a" name))))
 
 (defrule varname-%option (and namestring "%" namestring)
   ;; my_prov_status_list%ROWCOUNT

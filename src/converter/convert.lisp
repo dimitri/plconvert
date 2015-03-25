@@ -210,22 +210,6 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
                           :name (decl-var-name var)))
             (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))))
 
-;;;
-;;; TODO: switch this code to an upper level so that we can setf the qname
-;;; into its replacement node.
-;;;
-;;; With the current parsetree and given that walk-apply doesn't walk into
-;;; expressions it's not feasible, so first expressions have to be part of
-;;; the parse tree rather than their own list-based representation.
-;;;
-;;; We need to invent decicated structures to host the expressions, such as:
-;;;   - pl-expr-number
-;;;   - pl-expr-literal
-;;;   - pl-expr-is-null
-;;;   - pl-expr-case
-;;;   - pl-expr-case-when
-;;;   - pl-op
-;;;
 (defun process-package-vars (qname)
   "Package variable references are unqualified qname that are declared in
   *current-package-spec*, we need to do something about them."

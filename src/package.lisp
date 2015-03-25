@@ -221,10 +221,23 @@
            #:make-query
            #:query-sql
 
-           #:expression
-           #:expression-p
-           #:make-expression
-           #:expression-value
+           #:expr-op
+           #:expr-op-p
+           #:make-expr-op
+           #:expr-op-operator
+           #:expr-op-operands
+
+           #:expr-case
+           #:expr-case-p
+           #:make-expr-case
+           #:expr-case-when-list
+           #:expr-case-else-expr
+
+           #:expr-case-when
+           #:expr-case-when-p
+           #:make-expr-case-when
+           #:expr-case-when-cond
+           #:expr-case-when-expr
 
            #:comment
            #:comment-p

@@ -124,7 +124,9 @@
 
              (pl-raise     (walk-apply-helper (pl-raise-exception parsetree)))
 
-             (expression   (walk-apply-helper (expression-value parsetree)))
+             (expr-op      (mapc #'walk-apply-helper (expr-op-operands parsetree)))
+             (expr-case    (mapc #'walk-apply-helper (expr-case-when-list parsetree))
+                           (walk-apply-helper (expr-case-else-expr parsetree)))
 
              ;; terminal elements: don't recurse here.
              (qname        nil)

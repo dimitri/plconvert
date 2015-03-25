@@ -66,7 +66,11 @@
 
 (defstruct query sql)
 
-(defstruct expression value)
+(defstruct expr-op operator operands)
+(defstruct expr-case when-list else-expr)
+(defstruct expr-case-when cond expr)
+
+(defstruct comment text single-line-p)
 
 ;;;
 ;;; Some basic printing for the debugging
