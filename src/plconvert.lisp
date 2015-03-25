@@ -48,6 +48,10 @@
                  (uiop:directory-files pathname))))
     (values summary (reduce #'+ (mapcar #'third summary)))))
 
+;;;
+;;; TODO: pass all specs we have, there's some package dependency going on
+;;; wherein a package may refer to package variable from another one.
+;;;
 (defun convert-package (package-spec-pathname package-body-pathname)
   "Convert a source file into a PL/pgSQL file."
   (let ((spec (parse-file package-spec-pathname))

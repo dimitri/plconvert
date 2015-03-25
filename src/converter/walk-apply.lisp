@@ -118,7 +118,7 @@
 
              (pl-exception-when
               (walk-apply-helper (pl-exception-when-cond parsetree))
-              (walk-apply-helper (pl-exception-when-body parsetree)))
+              (mapc #'walk-apply-helper (pl-exception-when-body parsetree)))
 
              (pl-return    (walk-apply-helper (pl-return-value parsetree)))
 

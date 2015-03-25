@@ -7,6 +7,8 @@
            #:qname-package
            #:qname-name
 
+           #:qname-to-string
+
            #:cname
            #:cname-p
            #:make-cname
@@ -257,7 +259,8 @@
   (:import-from #:alexandria
                 #:appendf
                 #:read-file-into-string
-                #:read-file-into-byte-vector)
+                #:read-file-into-byte-vector
+                #:alist-hash-table)
   (:import-from #:split-sequence
                 #:split-sequence)
   (:export #:*user*

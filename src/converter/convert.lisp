@@ -29,12 +29,17 @@ TODO - see about custom exceptions
 (defvar *current-package-spec* nil
   "Current package spec (from the pks file) with global variable definitions.")
 
+(defvar *current-package-vars* nil
+  "Current package level variables and values, in a hash table.")
+
 (defvar *funs-with-out+return* '()
   "List of functions that needs tweeking their calling conventions.")
 
 (defvar *convert-from-oracle*
   '((convert-data-type            . (cname))
-    (process-package-vars         . (qname))
+    (process-package-vars         . (pl-return
+                                     assignment
+                                     pl-funcall))
     (out+return-to-returns-record . (fun))
     (set-ora-package              . (package-body package-specs))
     (qualify-fun-and-proc-names   . (fun proc))
@@ -46,10 +51,11 @@ TODO - see about custom exceptions
 
 (defun plsql-to-plpgsql (spec body)
   "Convert raw parsetree to a PL/pgSQL compatible parse tree."
-  (let ((*current-oracle-package* nil)
-        (*current-package-spec* spec))
+  (let* ((*current-ora-package* nil)
+         (*current-package-spec* spec)
+         (*current-package-vars* (collect-package-spec-variables spec)))
     (walk-apply body *convert-from-oracle*)
-    (values body (collect-package-spec-variables spec))))
+    body))
 
 ;;;
 ;;; The *current-ora-package* needs to be set so that we can qualify
@@ -204,26 +210,38 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
   (let* ((pqname   (package-spec-qname package-spec))
          (schema  (qname-package pqname))
          (package (qname-name pqname)))
-    (mapcar (lambda (var)
-              (make-qname :schema schema
-                          :package package
-                          :name (decl-var-name var)))
-            (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))))
+    (alist-hash-table
+     (mapcar (lambda (var)
+               (cons (qname-to-string
+                      (make-qname :schema schema
+                                  :package package
+                                  :name (decl-var-name var)))
+                     (decl-var-default var)))
+             (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))
+     :test 'equal)))
 
-(defun process-package-vars (qname)
+(defun process-package-vars (parsetree)
   "Package variable references are unqualified qname that are declared in
   *current-package-spec*, we need to do something about them."
-  (when (and (or (null (qname-schema qname))
-                 (string= (qname-schema qname)
-                          (qname-package *current-ora-package*)))
-             (or (null (qname-package qname))
-                 (string= (qname-package qname)
-                          (qname-name *current-ora-package*)))
-             (member (qname-name qname)
-                     (package-spec-decl-list *current-package-spec*)
-                     :key (lambda (decl)
-                            (when (decl-var-p decl)
-                              (decl-var-name decl)))
-                     :test #'string=))
+  (flet ((package-var (qname)
+           (when (qname-p qname)
+             (let ((qname-string
+                    (qname-to-string
+                     (make-qname :schema (or (qname-schema qname)
+                                             (qname-package *current-ora-package*))
+                                 :package (or (qname-package qname)
+                                              (qname-name *current-ora-package*))
+                                 :name (qname-name qname)))))
+               (gethash qname-string *current-package-vars*)))))
 
-    (format t "Found a package variable: ~s~%" qname)))
+    (macrolet ((replace-package-var-ref (form)
+                 (let ((value (gensym)))
+                   `(let ((,value (package-var ,form)))
+                      (when ,value
+                        (setf ,form ,value))))))
+
+      (typecase parsetree
+        (pl-return   (replace-package-var-ref (pl-return-value parsetree)))
+        (assignment  (replace-package-var-ref (assignment-value parsetree)))
+        (pl-funcall  (loop :for rest :on (pl-funcall-arg-list parsetree)
+                        :do (replace-package-var-ref (car rest))))))))
