@@ -70,6 +70,18 @@
            #:decl-type-record-name
            #:decl-type-record-att-list
 
+           #:decl-pragma
+           #:decl-pragma-p
+           #:make-decl-pragma
+           #:decl-pragma-name
+           #:decl-pragma-arg-list
+
+           #:decl-subtype
+           #:decl-subtype-p
+           #:make-decl-subtype
+           #:decl-subtype-name
+           #:decl-subtype-data-type
+
            #:code
            #:code-p
            #:make-code

@@ -45,7 +45,7 @@
                        (? (or in-out kw-in kw-out))
                        ignore-whitespace
                        typename
-                       (? (and kw-default expression))
+                       (? (and (or := kw-default) expression))
                        ignore-whitespace)
   (:lambda (params)
     (destructuring-bind (ws1 name ws2 mode ws3 type default ws4) params
@@ -56,7 +56,7 @@
                      :mode mode
                      :default (when default (cdr default)))))))
 
-(defrule in-out (and kw-in kw-out) (:constant :inout))
+(defrule in-out (and kw-in kw-out (? kw-nocopy)) (:constant :inout))
 
 (defrule block (and declare kw-begin body exception kw-end sc)
   (:lambda (x)
@@ -224,3 +224,9 @@
 
 (defrule exit (and kw-exit sc) (:constant :exit))
 
+;;; basically we ignore RESULT_CACHE
+(defrule result-cache (and kw-result_cache (? relies-on)))
+(defrule relies-on    (and kw-relies_on #\( namestring-list #\))
+  (:destructure (kw open list close) (declare (ignore kw open close)) list))
+(defrule namestring-list (and namestring (? (and "," namestring-list)))
+  (:destructure (first rest) (cons first (rest rest))))

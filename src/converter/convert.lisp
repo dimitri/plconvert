@@ -205,20 +205,22 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
 ;;;
 ;;; Package Spec Variables
 ;;;
-(defun collect-package-spec-variables (package-spec)
+(defun collect-package-spec-variables (package-spec
+                                       &optional (hash-table
+                                                  (make-hash-table :test 'equal)))
   "Return a list of package variables names."
   (let* ((pqname   (package-spec-qname package-spec))
          (schema  (qname-package pqname))
          (package (qname-name pqname)))
-    (alist-hash-table
-     (mapcar (lambda (var)
-               (cons (qname-to-string
-                      (make-qname :schema schema
-                                  :package package
-                                  :name (decl-var-name var)))
-                     (decl-var-default var)))
-             (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))
-     :test 'equal)))
+    (mapcar (lambda (var)
+              (setf (gethash (qname-to-string
+                              (make-qname :schema schema
+                                          :package package
+                                          :name (decl-var-name var)))
+                             hash-table)
+                    (decl-var-default var)))
+            (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))
+    hash-table))
 
 (defun process-package-vars (parsetree)
   "Package variable references are unqualified qname that are declared in

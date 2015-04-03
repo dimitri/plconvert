@@ -20,13 +20,13 @@
 (defrule typename-simple column-name
   (:lambda (x) (make-data-type :cname x)))
 
-(defrule typmod (and "("
+(defrule typmod (and ignore-whitespace "("
                      ignore-whitespace dec-number ignore-whitespace
                      (? (and "," ignore-whitespace dec-number ignore-whitespace))
-                     ")")
+                     ignore-whitespace ")")
   (:lambda (x)
-    (destructuring-bind (open ws1 scale ws2 precision close) x
-      (declare (ignore open ws1 ws2 close))
+    (destructuring-bind (open ws1 ws2 scale ws3 precision ws4 close) x
+      (declare (ignore open ws1 ws2 ws3 ws4 close))
       (let ((precision (when precision
                          (destructuring-bind (c ws1 precision ws2) precision
                            (declare (ignore c ws1 ws2))

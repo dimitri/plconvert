@@ -36,12 +36,13 @@
                        fdef-arglist
                        kw-return
                        typename
+                       (? result-cache)
                        kw-is
                        function-block)
   (:lambda (function)
-    (destructuring-bind (f name args r rettype is fun)
+    (destructuring-bind (f name args r rettype result-cache is fun)
         function
-      (declare (ignore f r is))
+      (declare (ignore f r result-cache is))
       (format t "Parsed function: ~s~%" name)
       (make-fun :name name
                 :arg-list args
@@ -53,4 +54,3 @@
 
 (defrule create-or-replace-package-body (and create-or-replace kw-package kw-body)
   (:constant :c-o-r-pbody))
-

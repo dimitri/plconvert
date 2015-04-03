@@ -24,6 +24,8 @@
 (defstruct decl-type-table name table index-by)
 (defstruct decl-type-cursor name)
 (defstruct decl-type-record name att-list)
+(defstruct decl-pragma name arg-list)
+(defstruct decl-subtype name data-type)
 
 (defstruct code decl-list body exception)
 

@@ -57,3 +57,26 @@
   (let ((spec (parse-file package-spec-pathname))
         (body (parse-file package-body-pathname)))
     (plsql-to-plpgsql spec body)))
+
+(defun find-spec-files (directory)
+  "Find all spec files in a given directory."
+  (let (spec-files)
+    (flet ((collect-spec-files (filename)
+             (when (eq :package-spec (file-type filename))
+               (push filename spec-files))))
+      (uiop:collect-sub*directories directory
+                                    t   ; always collect
+                                    t   ; always recurse
+                                    (lambda (directory)
+                                      (mapcar #'collect-spec-files
+                                              (uiop:directory-files directory)))))
+    spec-files))
+
+(defun collect-package-vars (directory)
+  "Find all spec files in given directory and parse them to collect their
+   variable definitions."
+  (loop :with vars := (make-hash-table :test 'equal)
+     :for spec-file :in (find-spec-files directory)
+     :for package-spec := (parse-file spec-file)
+     :do (collect-package-spec-variables package-spec vars)
+     :finally (return vars)))

@@ -7,9 +7,9 @@
 (defrule package-spec (and create-or-replace
                            kw-package
                            maybe-qualified-namestring
-                           kw-as
+                           (or kw-as kw-is)
                            (+ package-declaration)
-                           kw-end maybe-qualified-namestring
+                           kw-end (? maybe-qualified-namestring)
                            sc
                            (? (and "/" ignore-whitespace)))
   (:lambda (package)
@@ -17,13 +17,15 @@
       (declare (ignore c-o-r package as end n sc sl))
       (make-package-spec :qname name :decl-list decl-list))))
 
-(defrule package-declaration (and (! kw-end)
+(defrule package-declaration (and (! (and kw-end (? maybe-qualified-namestring) sc))
                                   (or var-declaration
                                       const-declaration
                                       type-declaration
                                       proc-declaration
                                       fun-declaration
-                                      cursor))
+                                      cursor
+                                      pragma-declaration
+                                      subtype-declaration))
   (:destructure (end decl) (declare (ignore end)) decl))
 
 (defrule proc-declaration (and kw-procedure
@@ -37,13 +39,14 @@
 
 (defrule fun-declaration (and kw-function
                               namestring
-                              fdef-arglist
+                              (? fdef-arglist)
                               kw-return
                               typename
+                              (? result-cache)
                               sc)
   (:lambda (fun-decl)
-    (destructuring-bind (f name args r rettype sc) fun-decl
-      (declare (ignore f r sc))
+    (destructuring-bind (f name args r rettype cache sc) fun-decl
+      (declare (ignore f r cache sc))
       (make-decl-fun :name name :arg-list args :ret-type rettype))))
 
 
@@ -58,3 +61,15 @@
     (destructuring-bind (ws1 varname c ws2 type default sc) const
       (declare (ignore c ws1 ws2 sc))
       (make-decl-var :name varname :type type :default default))))
+
+(defrule pragma-declaration (and kw-pragma namestring (? fcall-arglist) sc)
+  (:lambda (pragma)
+    (destructuring-bind (p name arglist sc) pragma
+      (declare (ignore p sc))
+      (make-decl-pragma :name name :arg-list arglist))))
+
+(defrule subtype-declaration (and kw-subtype namestring kw-is typename sc)
+  (:lambda (subtype)
+    (destructuring-bind (st name is data-type sc) subtype
+      (declare (ignore st is sc))
+      (make-decl-subtype :name name :data-type data-type))))

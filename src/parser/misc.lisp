@@ -21,11 +21,16 @@
 (defrule punct (or #\- #\_)
   (:text t))
 
-(defrule namestring (and (or #\_ (alpha-char-p character))
-			 (* (or (alpha-char-p character)
-				(digit-char-p character)
-				punct)))
+(defrule bare-namestring (and (or #\_ (alpha-char-p character))
+                              (* (or (alpha-char-p character)
+                                     (digit-char-p character)
+                                     punct)))
   (:text t))
+
+(defrule quoted-namestring (and #\" bare-namestring #\")
+  (:destructure (open n close) (declare (ignore open close)) (text n)))
+
+(defrule namestring (or bare-namestring quoted-namestring))
 
 (defrule maybe-qualified-namestring (and namestring
                                          (? (and "." namestring))
