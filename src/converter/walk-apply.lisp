@@ -105,6 +105,7 @@
              (pl-continue  (walk-apply-helper (pl-continue-cond parsetree)))
 
              (pl-funcall   (walk-apply-helper (pl-funcall-arg-list parsetree)))
+             (pl-perform   (walk-apply-helper (pl-perform-funcall parsetree)))
 
              (pl-open      (walk-apply-helper (pl-open-funcall parsetree))
                            (walk-apply-helper (pl-open-query parsetree)))

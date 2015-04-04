@@ -48,16 +48,13 @@
                  (uiop:directory-files pathname))))
     (values summary (reduce #'+ (mapcar #'third summary)))))
 
-;;;
-;;; TODO: pass all specs we have, there's some package dependency going on
-;;; wherein a package may refer to package variable from another one.
-;;;
-(defun convert-package (package-spec-pathname package-body-pathname)
-  "Convert a source file into a PL/pgSQL file."
-  (let ((spec (parse-file package-spec-pathname))
-        (body (parse-file package-body-pathname)))
-    (plsql-to-plpgsql spec body)))
 
+;;;
+;;; As we need to collect package-variable definitions for all the packages
+;;; of a given Oracle database, the main API works with a directory tree for
+;;; packages and schema wherein to find the .pkb and .pks files. We parse
+;;; the whole set of .pks files then consider the .pkb.
+;;;
 (defun find-spec-files (directory)
   "Find all spec files in a given directory."
   (let (spec-files)
@@ -75,8 +72,19 @@
 (defun collect-package-vars (directory)
   "Find all spec files in given directory and parse them to collect their
    variable definitions."
-  (loop :with vars := (make-hash-table :test 'equal)
-     :for spec-file :in (find-spec-files directory)
-     :for package-spec := (parse-file spec-file)
-     :do (collect-package-spec-variables package-spec vars)
-     :finally (return vars)))
+  (let ((vars (make-hash-table :test 'equalp)))
+   (loop :for spec-file :in (find-spec-files directory)
+      :for package-spec := (parse-file spec-file)
+      :do (collect-package-spec-variables package-spec vars))
+
+   ;; add some Oracle provided constants
+   (add-oracle-constants vars)
+
+   ;; and return our hash-table of Oracle package global variables
+   ;; replacements.
+   vars))
+
+(defun convert-package (pathname packages-vars)
+  "Convert a source file into a PL/pgSQL file."
+  (let ((*current-package-vars* packages-vars))
+    (plsql-to-plpgsql (parse-file pathname))))

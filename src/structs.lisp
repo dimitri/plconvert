@@ -54,7 +54,7 @@
 (defstruct pl-continue cond)
 
 (defstruct pl-funcall name arg-list)
-(defstruct pl-perform name arg-list)
+(defstruct pl-perform funcall)
 
 (defstruct pl-open name funcall query)
 (defstruct pl-fetch qname expr)

@@ -26,9 +26,6 @@ TODO - see about custom exceptions
 (defvar *current-ora-package* nil
   "Defined when parsing a Package Body or a Package Specs node.")
 
-(defvar *current-package-spec* nil
-  "Current package spec (from the pks file) with global variable definitions.")
-
 (defvar *current-package-vars* nil
   "Current package level variables and values, in a hash table.")
 
@@ -49,11 +46,18 @@ TODO - see about custom exceptions
                                      pl-case pl-case-when
                                      pl-exception-when))))
 
-(defun plsql-to-plpgsql (spec body)
+(defvar *oracle-constants*
+  (loop :for (ora . pg) :in '(("SYSDATE" . "CURRENT_TIMESTAMP"))
+     :collect (cons (make-qname :name ora) (make-qname :name pg))))
+
+(defun add-oracle-constants (hash-table)
+  "Add oracle constants to given HASH-TABLE."
+  (loop :for (name . value) :in *oracle-constants*
+     :do (setf (gethash name hash-table) value)))
+
+(defun plsql-to-plpgsql (body)
   "Convert raw parsetree to a PL/pgSQL compatible parse tree."
-  (let* ((*current-ora-package* nil)
-         (*current-package-spec* spec)
-         (*current-package-vars* (collect-package-spec-variables spec)))
+  (let* ((*current-ora-package* nil))
     (walk-apply body *convert-from-oracle*)
     body))
 
@@ -180,10 +184,7 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
   (flet ((replace-funcalls (list-of-nodes)
            (loop :for rest :on list-of-nodes :by #'cdr
               :when (typep (car rest) 'pl-funcall)
-              :do (setf (car rest)
-                        (make-pl-perform
-                         :name (pl-funcall-name (car rest))
-                         :arg-list (pl-funcall-arg-list (car rest)))))))
+              :do (setf (car rest) (make-pl-perform :funcall (car rest))))))
 
     (typecase parsetree
       (code    (replace-funcalls (code-body parsetree)))
@@ -207,18 +208,17 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
 ;;;
 (defun collect-package-spec-variables (package-spec
                                        &optional (hash-table
-                                                  (make-hash-table :test 'equal)))
+                                                  (make-hash-table :test 'equalp)))
   "Return a list of package variables names."
   (let* ((pqname   (package-spec-qname package-spec))
          (schema  (qname-package pqname))
          (package (qname-name pqname)))
     (loop :for decl :in (package-spec-decl-list package-spec)
        :when (decl-var-p decl)
-       :do (setf (gethash (qname-to-string
-                              (make-qname :schema schema
-                                          :package package
-                                          :name (decl-var-name decl)))
-                             hash-table)
+       :do (setf (gethash (make-qname :schema schema
+                                      :package package
+                                      :name (decl-var-name decl))
+                          hash-table)
                  (decl-var-default decl))
        :finally (return hash-table))))
 
@@ -227,14 +227,17 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
   *current-package-spec*, we need to do something about them."
   (flet ((package-var (qname)
            (when (qname-p qname)
-             (let ((qname-string
-                    (qname-to-string
-                     (make-qname :schema (or (qname-schema qname)
-                                             (qname-package *current-ora-package*))
-                                 :package (or (qname-package qname)
-                                              (qname-name *current-ora-package*))
-                                 :name (qname-name qname)))))
-               (gethash qname-string *current-package-vars*)))))
+             (let ((fqn                 ; fully qualified name
+                    (cond
+                      ((assoc qname *oracle-constants* :test #'equalp)
+                       qname)
+                      (t
+                       (make-qname :schema (or (qname-schema qname)
+                                               (qname-package *current-ora-package*))
+                                   :package (or (qname-package qname)
+                                                (qname-name *current-ora-package*))
+                                   :name (qname-name qname))))))
+               (gethash fqn *current-package-vars*)))))
 
     (macrolet ((replace-package-var-ref (form)
                  (let ((value (gensym)))
