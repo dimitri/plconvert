@@ -212,15 +212,15 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
   (let* ((pqname   (package-spec-qname package-spec))
          (schema  (qname-package pqname))
          (package (qname-name pqname)))
-    (mapcar (lambda (var)
-              (setf (gethash (qname-to-string
+    (loop :for decl :in (package-spec-decl-list package-spec)
+       :when (decl-var-p decl)
+       :do (setf (gethash (qname-to-string
                               (make-qname :schema schema
                                           :package package
-                                          :name (decl-var-name var)))
+                                          :name (decl-var-name decl)))
                              hash-table)
-                    (decl-var-default var)))
-            (remove-if-not #'decl-var-p (package-spec-decl-list package-spec)))
-    hash-table))
+                 (decl-var-default decl))
+       :finally (return hash-table))))
 
 (defun process-package-vars (parsetree)
   "Package variable references are unqualified qname that are declared in
