@@ -69,22 +69,8 @@
                                               (uiop:directory-files directory)))))
     spec-files))
 
-(defun collect-package-vars (directory)
-  "Find all spec files in given directory and parse them to collect their
-   variable definitions."
-  (let ((vars (make-hash-table :test 'equalp)))
-   (loop :for spec-file :in (find-spec-files directory)
-      :for package-spec := (parse-file spec-file)
-      :do (collect-package-spec-variables package-spec vars))
-
-   ;; add some Oracle provided constants
-   (add-oracle-constants vars)
-
-   ;; and return our hash-table of Oracle package global variables
-   ;; replacements.
-   vars))
-
-(defun convert-package (pathname packages-vars)
+(defun convert-package (pathname directory)
   "Convert a source file into a PL/pgSQL file."
-  (let ((*current-package-vars* packages-vars))
-    (plsql-to-plpgsql (parse-file pathname))))
+  (let ((list-of-package-specs
+         (mapcar #'parse-file (find-spec-files directory))))
+    (plsql-to-plpgsql (parse-file pathname) list-of-package-specs)))

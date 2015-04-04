@@ -26,25 +26,37 @@ TODO - see about custom exceptions
 (defvar *current-ora-package* nil
   "Defined when parsing a Package Body or a Package Specs node.")
 
-(defvar *current-package-vars* nil
+(defvar *current-function* nil
+  "Defined when parsing a function definition.")
+
+(defvar *packages-vars* nil
   "Current package level variables and values, in a hash table.")
 
-(defvar *funs-with-out+return* '()
+(defvar *funs-with-out+return* nil
   "List of functions that needs tweeking their calling conventions.")
+
+(defvar *analyze-package-specs*
+  '((set-ora-package                . (package-spec))
+    (collect-package-spec-variables . (decl-var))
+    (collect-funs-with-out+return   . (decl-fun)))
+  "Analyze package specifications and prepare dynamic bindings.")
 
 (defvar *convert-from-oracle*
   '((convert-data-type            . (cname))
     (process-package-vars         . (pl-return
                                      assignment
                                      pl-funcall))
-    (out+return-to-returns-record . (fun))
-    (set-ora-package              . (package-body package-specs))
+    (set-ora-package              . (package-body))
+    (set-current-function         . (fun proc))
     (qualify-fun-and-proc-names   . (fun proc))
+    (out+return-to-returns-record . (fun))
+    (out+return-call-sites        . (pl-funcall))
     (funcall-to-perform           . (code
                                      pl-if
                                      pl-for pl-forall
                                      pl-case pl-case-when
-                                     pl-exception-when))))
+                                     pl-exception-when)))
+  "Convert rules from Oracle to PostgreSQL")
 
 (defvar *oracle-constants*
   (loop :for (ora . pg) :in '(("SYSDATE" . "CURRENT_TIMESTAMP"))
@@ -55,11 +67,27 @@ TODO - see about custom exceptions
   (loop :for (name . value) :in *oracle-constants*
      :do (setf (gethash name hash-table) value)))
 
-(defun plsql-to-plpgsql (body)
+(defun plsql-to-plpgsql (body list-of-package-specs)
   "Convert raw parsetree to a PL/pgSQL compatible parse tree."
-  (let* ((*current-ora-package* nil))
+  (let* ((*current-ora-package*  nil)   ; limit scope of changes
+         (*current-function*     nil)   ; to there dynamic bindings
+         (*packages-vars*        (make-hash-table :test 'equalp))
+         (*funs-with-out+return* (make-hash-table :test 'equalp)))
+
+    ;; analyze package specifications and prepare context for converting the
+    ;; stored procedures and function...
+    (loop :for spec :in list-of-package-specs
+       :do (walk-apply spec *analyze-package-specs*))
+
+    ;; add the oracle constants to the variables to transform
+    (loop :for (name . value) :in *oracle-constants*
+       :do (setf (gethash name *packages-vars*) value))
+
+    ;; now convert Oracle PL code to something that PostgreSQL might accept
     (walk-apply body *convert-from-oracle*)
-    body))
+
+    (values *packages-vars* *funs-with-out+return* ;; body
+            )))
 
 ;;;
 ;;; The *current-ora-package* needs to be set so that we can qualify
@@ -71,6 +99,11 @@ TODO - see about custom exceptions
         (typecase parsetree
           (package-body (package-body-qname parsetree))
           (package-spec (package-spec-qname parsetree)))))
+
+(defun set-current-function (fun-or-proc)
+  "Set the current function so that we can easily change the local
+   declaration list from somewhere in the processing."
+  (setf *current-function* fun-or-proc))
 
 (defun qualify-fun-and-proc-names (parsetree)
   "Change function and procedure names into qualified names."
@@ -148,33 +181,62 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
 ;;;
 ;;; Fix output types of functions signatures and call sites.
 ;;;
-(defun out+return-to-returns-record (fun)
-  "In Oracle it's possible to have both OUT parameters and a return value,
-   in PostgreSQL the return value is composed of the OUT parameters."
-  (when (fun-ret-type fun)
-    (let ((out-params (loop :for param :in (fun-arg-list fun)
+(defun collect-funs-with-out+return (decl-fun)
+  "Collect names of function with both out and return usage so that we can
+   later process (and properly transform) their call sites."
+  (when (decl-fun-ret-type decl-fun)
+    (let ((out-params (loop :for param :in (decl-fun-arg-list decl-fun)
                          :when (member (funarg-mode param) '(:out :inout))
                          :collect param)))
       (when out-params
         ;; remember the name of the function so that we can later rewrite
         ;; its funcall sites.
-        (push fun *funs-with-out+return*)
+        ;;
+        ;; first fully qualify function name in the declaration
+        (setf (decl-fun-name decl-fun)
+              (make-qname :schema (qname-package *current-ora-package*)
+                          :package (qname-name *current-ora-package*)
+                          :name (decl-fun-name decl-fun)))
 
-        (let ((new-arg-name
-               (make-qname :schema nil :package nil :name "__ret__"))
-              (new-ret-type
-               (make-data-type :cname (make-cname :schema nil
-                                                  :relname nil
-                                                  :attribute "record"))))
+        (setf (gethash (decl-fun-name decl-fun) *funs-with-out+return*)
+              decl-fun)))))
 
-          ;; first append the return value as another parameter
-          (appendf (fun-arg-list fun)
-                   (list (make-funarg :name new-arg-name
-                                      :type (fun-ret-type fun)
-                                      :mode :out)))
+(defun out+return-to-returns-record (fun)
+  "In Oracle it's possible to have both OUT parameters and a return value,
+   in PostgreSQL the return value is composed of the OUT parameters."
+  (when (gethash (fun-name fun) *funs-with-out+return*)
+    ;; replace the hash-table entry with the full function for easier
+    ;; manipulation later
+    ;; (setf (gethash (fun-name fun) *funs-with-out+return*) fun)
 
-          ;; now change the return type to "record"
-          (setf (fun-ret-type fun) new-ret-type))))))
+    (let ((new-arg-name
+           (make-qname :schema nil :package nil :name "__ret__"))
+          (new-ret-type
+           (make-data-type :cname (make-cname :schema nil
+                                              :relname nil
+                                              :attribute "record"))))
+
+      ;; first append the return value as another parameter
+      (appendf (fun-arg-list fun)
+               (list (make-funarg :name new-arg-name
+                                  :type (fun-ret-type fun)
+                                  :mode :out)))
+
+      ;; now change the return type to "record"
+      (setf (fun-ret-type fun) new-ret-type))))
+
+(defun out+return-call-sites (funcall)
+  "We need to add a return variable and tweak the code to use it."
+  (when (gethash (pl-funcall-name funcall) *funs-with-out+return*)
+    (format t "out+return: call-site ~a~%"
+            (typecase *current-function*
+              (fun  (fun-name *current-function*))
+              (proc (proc-name *current-function*))))
+
+    (let ((callee (gethash (pl-funcall-name funcall) *funs-with-out+return*)))
+      (format t "              funcall ~a~%" (pl-funcall-name funcall))
+      (format t "             arg-list ~a~%" (decl-fun-arg-list callee))
+      (format t "             ret-type ~a~%" (decl-fun-ret-type callee)))))
 
 ;;;
 ;;; Some Oracle funcalls needs to be converted into PERFORM nodes
@@ -206,21 +268,13 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
 ;;;
 ;;; Package Spec Variables
 ;;;
-(defun collect-package-spec-variables (package-spec
-                                       &optional (hash-table
-                                                  (make-hash-table :test 'equalp)))
+(defun collect-package-spec-variables (decl-var)
   "Return a list of package variables names."
-  (let* ((pqname   (package-spec-qname package-spec))
-         (schema  (qname-package pqname))
-         (package (qname-name pqname)))
-    (loop :for decl :in (package-spec-decl-list package-spec)
-       :when (decl-var-p decl)
-       :do (setf (gethash (make-qname :schema schema
-                                      :package package
-                                      :name (decl-var-name decl))
-                          hash-table)
-                 (decl-var-default decl))
-       :finally (return hash-table))))
+  (setf (gethash (make-qname :schema (qname-package *current-ora-package*)
+                             :package (qname-name *current-ora-package*)
+                             :name (decl-var-name decl-var))
+                 *packages-vars*)
+        (decl-var-default decl-var)))
 
 (defun process-package-vars (parsetree)
   "Package variable references are unqualified qname that are declared in
@@ -237,7 +291,7 @@ CASE WHEN data_type = 'VARCHAR' THEN 'text'
                                    :package (or (qname-package qname)
                                                 (qname-name *current-ora-package*))
                                    :name (qname-name qname))))))
-               (gethash fqn *current-package-vars*)))))
+               (gethash fqn *packages-vars*)))))
 
     (macrolet ((replace-package-var-ref (form)
                  (let ((value (gensym)))
