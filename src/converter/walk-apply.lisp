@@ -6,6 +6,15 @@
 
 (in-package #:plconvert)
 
+(defvar *traversed-nodes* nil
+  "List of nodes traversed to get to the current parsetree node.")
+
+(defmacro with-traversal ((parsetree) &body body)
+  `(prog2
+       (push ,parsetree *traversed-nodes*)
+       (progn ,@body)
+     (pop *traversed-nodes*)))
+
 (defun map-nodes-to-fun-list (fun-node-map)
   "Given a FUN-NODE-MAP as given in WALK-APPLY, reorganize it to simplify
    WALK-APPLY implementation."
@@ -24,7 +33,8 @@
 
    If several functions are attached to the same node type, all of them are
    going to be called in the order they are found in FUN-NODE-MAP."
-  (let ((node-fun-list (map-nodes-to-fun-list fun-node-map)))
+  (let ((node-fun-list     (map-nodes-to-fun-list fun-node-map))
+        (*traversed-nodes* nil))
     (labels
         ((walk-apply-helper (parsetree)
            (let ((fun-list (gethash (type-of parsetree) node-fun-list)))
@@ -32,18 +42,22 @@
                (loop :for fun :in fun-list :do (funcall fun parsetree))))
 
            (typecase parsetree
-             (package-body (mapc #'walk-apply-helper
-                                 (package-body-object-list parsetree)))
+             (package-body (with-traversal (parsetree)
+                             (mapc #'walk-apply-helper
+                                   (package-body-object-list parsetree))))
 
-             (package-spec (mapc #'walk-apply-helper
-                                 (package-spec-decl-list parsetree)))
+             (package-spec (with-traversal (parsetree)
+                             (mapc #'walk-apply-helper
+                                   (package-spec-decl-list parsetree))))
 
-             (fun          (mapc #'walk-apply-helper (fun-arg-list parsetree))
-                           (walk-apply-helper (fun-ret-type parsetree))
-                           (walk-apply-helper (fun-code parsetree)))
+             (fun          (with-traversal (parsetree)
+                             (mapc #'walk-apply-helper (fun-arg-list parsetree))
+                             (walk-apply-helper (fun-ret-type parsetree))
+                             (walk-apply-helper (fun-code parsetree))))
 
-             (proc         (mapc #'walk-apply-helper (proc-arg-list parsetree))
-                           (walk-apply-helper (proc-code parsetree)))
+             (proc         (with-traversal (parsetree)
+                             (mapc #'walk-apply-helper (proc-arg-list parsetree))
+                             (walk-apply-helper (proc-code parsetree))))
 
              (funarg       (walk-apply-helper (funarg-type parsetree)))
 
@@ -67,40 +81,49 @@
 
              (data-type    (walk-apply-helper (data-type-cname parsetree)))
 
-             (code         (mapc #'walk-apply-helper (code-decl-list parsetree))
-                           (mapc #'walk-apply-helper (code-body parsetree))
-                           (walk-apply-helper (code-exception parsetree)))
+             (code         (with-traversal (parsetree)
+                             (mapc #'walk-apply-helper (code-decl-list parsetree))
+                             (mapc #'walk-apply-helper (code-body parsetree))
+                             (walk-apply-helper (code-exception parsetree))))
 
-             (assignment   (walk-apply-helper (assignment-name parsetree))
-                           (walk-apply-helper (assignment-value parsetree)))
+             (assignment   (with-traversal (parsetree)
+                             (walk-apply-helper (assignment-name parsetree))
+                             (walk-apply-helper (assignment-value parsetree))))
 
              (tcl          (walk-apply-helper (tcl-command parsetree)))
 
-             (pl-if        (walk-apply-helper (pl-if-cond parsetree))
-                           (walk-apply-helper (pl-if-then-body parsetree))
-                           (mapc #'walk-apply-helper (pl-if-elsif-list parsetree))
-                           (walk-apply-helper (pl-if-else-body parsetree)))
+             (pl-if        (with-traversal (parsetree)
+                             (walk-apply-helper (pl-if-cond parsetree))
+                             (walk-apply-helper (pl-if-then-body parsetree))
+                             (mapc #'walk-apply-helper (pl-if-elsif-list parsetree))
+                             (walk-apply-helper (pl-if-else-body parsetree))))
 
-             (pl-elsif     (walk-apply-helper (pl-elsif-cond parsetree))
-                           (walk-apply-helper (pl-elsif-body parsetree)))
+             (pl-elsif     (with-traversal (parsetree)
+                             (walk-apply-helper (pl-elsif-cond parsetree))
+                             (walk-apply-helper (pl-elsif-body parsetree))))
 
-             (pl-for       (walk-apply-helper (pl-for-var parsetree))
-                           (walk-apply-helper (pl-for-set parsetree))
-                           (walk-apply-helper (pl-for-body parsetree)))
+             (pl-for       (with-traversal (parsetree)
+                             (walk-apply-helper (pl-for-var parsetree))
+                             (walk-apply-helper (pl-for-set parsetree))
+                             (walk-apply-helper (pl-for-body parsetree))))
 
-             (pl-forall    (walk-apply-helper (pl-forall-var parsetree))
-                           (walk-apply-helper (pl-forall-set parsetree))
-                           (walk-apply-helper (pl-forall-body parsetree)))
+             (pl-forall    (with-traversal (parsetree)
+                             (walk-apply-helper (pl-forall-var parsetree))
+                             (walk-apply-helper (pl-forall-set parsetree))
+                             (walk-apply-helper (pl-forall-body parsetree))))
 
-             (pl-for-range (walk-apply-helper (pl-for-range-start parsetree))
-                           (walk-apply-helper (pl-for-range-end parsetree)))
+             (pl-for-range (with-traversal (parsetree)
+                             (walk-apply-helper (pl-for-range-start parsetree))
+                             (walk-apply-helper (pl-for-range-end parsetree))))
 
-             (pl-case      (walk-apply-helper (pl-case-expr parsetree))
-                           (mapc #'walk-apply-helper (pl-case-when-list parsetree))
-                           (walk-apply-helper (pl-case-else-body parsetree)))
+             (pl-case      (with-traversal (parsetree)
+                             (walk-apply-helper (pl-case-expr parsetree))
+                             (mapc #'walk-apply-helper (pl-case-when-list parsetree))
+                             (walk-apply-helper (pl-case-else-body parsetree))))
 
-             (pl-case-when (walk-apply-helper (pl-case-when-cond parsetree))
-                           (walk-apply-helper (pl-case-when-body parsetree)))
+             (pl-case-when (with-traversal (parsetree)
+                             (walk-apply-helper (pl-case-when-cond parsetree))
+                             (walk-apply-helper (pl-case-when-body parsetree))))
 
              (pl-continue  (walk-apply-helper (pl-continue-cond parsetree)))
 
@@ -114,20 +137,27 @@
 
              ;; (pl-close     (walk-apply-helper (pl-close-qname parsetree)))
 
-             (pl-exception (mapc #'walk-apply-helper
-                                 (pl-exception-when-list parsetree)))
+             (pl-exception (with-traversal (parsetree)
+                             (mapc #'walk-apply-helper
+                                   (pl-exception-when-list parsetree))))
 
              (pl-exception-when
-              (walk-apply-helper (pl-exception-when-cond parsetree))
-              (mapc #'walk-apply-helper (pl-exception-when-body parsetree)))
+              (with-traversal (parsetree)
+                (walk-apply-helper (pl-exception-when-cond parsetree))
+                (mapc #'walk-apply-helper (pl-exception-when-body parsetree))))
 
              (pl-return    (walk-apply-helper (pl-return-value parsetree)))
 
              (pl-raise     (walk-apply-helper (pl-raise-exception parsetree)))
 
-             (expr-op      (mapc #'walk-apply-helper (expr-op-operands parsetree)))
-             (expr-case    (mapc #'walk-apply-helper (expr-case-when-list parsetree))
-                           (walk-apply-helper (expr-case-else-expr parsetree)))
+             (expr-op
+              (with-traversal (parsetree)
+                (mapc #'walk-apply-helper (expr-op-operands parsetree))))
+
+             (expr-case
+              (with-traversal (parsetree)
+                (mapc #'walk-apply-helper (expr-case-when-list parsetree))
+                (walk-apply-helper (expr-case-else-expr parsetree))))
 
              ;; terminal elements: don't recurse here.
              (qname        nil)

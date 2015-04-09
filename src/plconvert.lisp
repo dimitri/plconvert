@@ -74,3 +74,11 @@
   (let ((list-of-package-specs
          (mapcar #'parse-file (find-spec-files directory))))
     (plsql-to-plpgsql (parse-file pathname) list-of-package-specs)))
+
+
+(defun test (expression input directory)
+  "Test parsing and converting INPUT given a DIRECTORY of specs etc."
+  (let ((list-of-package-specs
+         (mapcar #'parse-file (find-spec-files directory))))
+    (plsql-to-plpgsql (plconvert.parser::parse expression input)
+                      list-of-package-specs)))

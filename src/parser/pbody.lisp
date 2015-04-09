@@ -26,7 +26,6 @@
     (destructuring-bind (p name args is fun)
         function
       (declare (ignore p is))
-      (format t "Parsed procedure: ~s~%" name)
       (make-proc :name name
                  :arg-list args
                  :code fun))))
@@ -43,7 +42,6 @@
     (destructuring-bind (f name args r rettype result-cache is fun)
         function
       (declare (ignore f r result-cache is))
-      (format t "Parsed function: ~s~%" name)
       (make-fun :name name
                 :arg-list args
                 :ret-type rettype
