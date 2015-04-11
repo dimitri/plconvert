@@ -1,8 +1,8 @@
 ;;;
-;;; Graveyard for code that's been removed from out-return.lisp even before
-;;; having had the chance to be commited to the repository. We keep it there
-;;; for now in case we want to revive it to solve the (estimated) 1% problem
-;;; of function-name/arity collisions and DTRT in call cases.
+;;; When we have function-name / arity collisions, and when that collision
+;;; hapens between out+return function and "normal" functions, then we need
+;;; to find which implementation of the function is actually being called by
+;;; deriving a full prototype of the function call, from its arguments.
 ;;;
 
 (in-package #:plconvert)
@@ -46,7 +46,14 @@
 
                     (let ((var (gethash (fqn expr) *packages-vars*)))
                       (when var
-                        (make-proto-arg-type (decl-var-type var))))))
+                        (make-proto-arg-type (decl-var-type var))))
+
+                    ;; Oracle Constant have already been translated at this
+                    ;; point, so we need to match against their PostgreSQL
+                    ;; spellings.
+                    (loop :for (name . var) :in *oracle-constants*
+                       :when (string-equal (decl-var-name var) (qname-name expr))
+                       :return (make-proto-arg-type (decl-var-type var)))))
 
     (pl-funcall (let ((fun (gethash (make-prototype expr) *packages-funs*)))
                   (when fun
@@ -57,6 +64,7 @@
                   "text"))
 
     (string    "text")
+    (number    "numeric")
 
     (expr-case nil)
 
@@ -84,3 +92,17 @@
                          (find-arg-types
                           (pl-funcall-arg-list node)))))))
 
+(defun print-prototype (prototype)
+  "Pretty print a function's PROTOTYPE as computed with make-prototype."
+  (format nil "~a(~{~a~^, ~})" (qname-to-string (first prototype)) (rest prototype)))
+
+(defun print-in-out-arg-list (decl-fun)
+  "For debugging purposes, pring all DECL-FUN arguments modes and type names."
+  (format nil "~a(~{~a ~a~^, ~})"
+          (qname-to-string (decl-fun-name decl-fun))
+          (apply #'append
+                 (mapcar (lambda (funarg)
+                           (list (funarg-mode funarg)
+                                 (cname-attribute
+                                  (data-type-cname (funarg-type funarg)))))
+                         (decl-fun-arg-list decl-fun)))))

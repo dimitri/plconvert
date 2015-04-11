@@ -50,9 +50,13 @@ TODO - see about custom exceptions
   "Convert rules from Oracle to PostgreSQL")
 
 (defvar *oracle-constants*
-  (loop :for (ora pg type) :in '(("SYSDATE" "CURRENT_TIMESTAMP" "timestamptz"))
+  (loop :for (ora pg default type)
+     :in '(("SYSDATE" "CURRENT_TIMESTAMP" "CURRENT_TIMESTAMP" "timestamptz"))
+     :for data-type := (make-data-type :cname (make-cname :attribute type))
      :collect (cons (make-qname :name ora)
-                    (make-decl-var :name pg :type type))))
+                    (make-decl-var :name pg
+                                   :default (make-qname :name pg)
+                                   :type data-type))))
 
 (defun add-oracle-constants (hash-table)
   "Add oracle constants to given HASH-TABLE."
@@ -73,8 +77,7 @@ TODO - see about custom exceptions
        :do (walk-apply spec *analyze-package-specs*))
 
     ;; add the oracle constants to the variables to transform
-    (loop :for (name . value) :in *oracle-constants*
-       :do (setf (gethash name *packages-vars*) value))
+    (add-oracle-constants *packages-vars*)
 
     ;; now convert Oracle PL code to something that PostgreSQL might accept
     (walk-apply body *convert-from-oracle*)

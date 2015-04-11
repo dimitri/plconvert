@@ -103,6 +103,44 @@
                          (sb-kernel:get-lisp-obj-address node)))
                *traversed-nodes*))
 
-      (let ((callee (gethash signature *funs-with-out+return*)))
-        (format t "              funcall ~a~%" (print-signature signature))
-        (format t "            fun-table ~a~%" callee)))))
+      ;;
+      ;; So we are calling a function withan out+return signature... it
+      ;; could well be that this function also has overloading definitions
+      ;; without out+return.
+      ;;
+      ;; In that case, we need to guestimate which variant we are actually
+      ;; calling, if possible (we need to be able to derive the data type of
+      ;; all the parameters at the call site).
+      ;;
+      (let ((candidates (gethash signature *packages-funs*)))
+        (cond ((< 1 (length candidates))
+               ;; let's try to find which function we're calling here exactly
+               (let ((match (first (member (make-prototype funcall)
+                                           candidates
+                                           :key #'make-prototype
+                                           :test #'equalp))))
+
+                 (cond (match
+                        (format t "              calling ~a~%"
+                                (print-in-out-arg-list match))
+                        (if (fun-with-out+return-p match)
+                            (format t "        TODO: replace~%")
+                            (format t "                 done~%")))
+                       (t
+                        ;; TODO: add a WARNING in the source code
+                        (format t "              funcall ~a~%"
+                                (print-signature signature))
+                        (format t "                 args ~a~%"
+                                (pl-funcall-arg-list funcall))
+                        (format t "            prototype ~a~%"
+                                (print-prototype (make-prototype funcall)))
+                        (format t "           candidates ~@<~a~@:>~%"
+                                (mapcar #'print-in-out-arg-list candidates))
+                        (format t "      FAIL: no match!~%")))))
+
+              ((and (= 1 (length candidates))
+                    (fun-with-out+return-p (first candidates)))
+               (format t "              calling ~a~%"
+                       (print-in-out-arg-list (first candidates)))
+               (format t "        TODO: replace~%")))))))
+
