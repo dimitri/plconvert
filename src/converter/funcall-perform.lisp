@@ -8,7 +8,10 @@
   (flet ((replace-funcalls (list-of-nodes)
            (loop :for rest :on list-of-nodes :by #'cdr
               :when (typep (car rest) 'pl-funcall)
-              :do (setf (car rest) (make-pl-perform :funcall (car rest))))))
+              :do (setf (car rest)
+                        (make-pl-perform
+                         :name (pl-funcall-name (car rest))
+                         :arg-list (pl-funcall-arg-list (car rest)))))))
 
     (typecase parsetree
       (code    (replace-funcalls (code-body parsetree)))

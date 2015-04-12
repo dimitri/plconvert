@@ -188,7 +188,8 @@
            #:pl-perform
            #:pl-perform-p
            #:make-pl-perform
-           #:pl-perform-funcall
+           #:pl-perform-name
+           #:pl-perform-arg-list
 
            #:pl-open
            #:pl-open-p
