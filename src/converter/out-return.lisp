@@ -90,19 +90,6 @@
   "We need to add a return variable and tweak the code to use it."
   (let ((signature (make-signature funcall)))
     (when (gethash signature *funs-with-out+return*)
-      (format t "out+return: call-site ~a~%"
-              (typecase *current-function*
-                (fun  (fun-name *current-function*))
-                (proc (proc-name *current-function*))))
-
-      (format t "            traversed ~{~a~^ ~}~%"
-              (mapcar
-               (lambda (node)
-                 (format nil "~a {~16r}"
-                         (type-of node)
-                         (sb-kernel:get-lisp-obj-address node)))
-               *traversed-nodes*))
-
       ;;
       ;; So we are calling a function withan out+return signature... it
       ;; could well be that this function also has overloading definitions
@@ -113,34 +100,61 @@
       ;; all the parameters at the call site).
       ;;
       (let ((candidates (gethash signature *packages-funs*)))
-        (cond ((< 1 (length candidates))
-               ;; let's try to find which function we're calling here exactly
-               (let ((match (first (member (make-prototype funcall)
-                                           candidates
-                                           :key #'make-prototype
-                                           :test #'equalp))))
+        (flet ((print-debug-info (action)
+                 (format t "out+return: call-site ~a~%"
+                         (typecase *current-function*
+                           (fun  (fun-name *current-function*))
+                           (proc (proc-name *current-function*))))
 
-                 (cond (match
-                        (format t "              calling ~a~%"
-                                (print-in-out-arg-list match))
-                        (if (fun-with-out+return-p match)
-                            (format t "        TODO: replace~%")
-                            (format t "                 done~%")))
-                       (t
-                        ;; TODO: add a WARNING in the source code
-                        (format t "              funcall ~a~%"
-                                (print-signature signature))
-                        (format t "                 args ~a~%"
-                                (pl-funcall-arg-list funcall))
-                        (format t "            prototype ~a~%"
-                                (print-prototype (make-prototype funcall)))
-                        (format t "           candidates ~@<~a~@:>~%"
-                                (mapcar #'print-in-out-arg-list candidates))
-                        (format t "      FAIL: no match!~%")))))
+                 (format t "            traversed ~{~a~^ ~}~%"
+                         (mapcar
+                          (lambda (node)
+                            (format nil "~a {~16r}"
+                                    (type-of node)
+                                    (sb-kernel:get-lisp-obj-address node)))
+                          *traversed-nodes*))
 
-              ((and (= 1 (length candidates))
-                    (fun-with-out+return-p (first candidates)))
-               (format t "              calling ~a~%"
-                       (print-in-out-arg-list (first candidates)))
-               (format t "        TODO: replace~%")))))))
+                 (format t "              funcall ~a~%"
+                         (print-signature signature))
+                 (format t "                 args ~a~%"
+                         (pl-funcall-arg-list funcall))
+                 (format t "            prototype ~a~%"
+                         (print-prototype (make-prototype funcall)))
+
+                 (if (= 1 (length candidates))
+                     (format t "              calling ~a~%"
+                             (print-in-out-arg-list (first candidates)))
+                     (format t "           candidates ~@<~a~@:>~%"
+                             (mapcar #'print-in-out-arg-list candidates)))
+
+                 (format t "      ~a~%" action)))
+
+          (cond
+            ;; if we have more than one candidate function definition being
+            ;; called here, try to find the one we're calling.
+            ((< 1 (length candidates))
+             ;; let's try to find which function we're calling here exactly
+             (let ((match (first (member (make-prototype funcall)
+                                         candidates
+                                         :key #'make-prototype
+                                         :test #'equalp))))
+
+               (cond
+                 ((and match (fun-with-out+return-p match))
+                  ;; Replace the call
+                  (print-debug-info "TODO: replace"))
+
+                 (match
+                  ;; full debug mode needs this
+                  (print-debug-info "done"))
+
+                 ((not match)
+                  ;; TODO: add a WARNING in the source code
+                  (print-debug-info "FAIL: no match!")))))
+
+            ;; We have only one function definition candidate, and it's an
+            ;; out+return function, just replace it
+            ((and (= 1 (length candidates))
+                  (fun-with-out+return-p (first candidates)))
+             (print-debug-info "TODO: replace"))))))))
 
