@@ -8,19 +8,20 @@
                            maybe-qualified-namestring
                            kw-as
                            (+ (or function procedure))
+                           (? package-init)
                            kw-end maybe-qualified-namestring
                            #\;
                            ignore-whitespace
                            (? (and "/" ignore-whitespace)))
   (:lambda (package)
-    (destructuring-bind (c-o-r name as funs end n sc ws sl) package
+    (destructuring-bind (c-o-r name as funs init end n sc ws sl) package
       (declare (ignore c-o-r as end n sc ws sl))
-      (make-package-body :qname name :object-list funs))))
+      (make-package-body :qname name :object-list funs :init init))))
 
 (defrule procedure (and kw-procedure
                         namestring
-                        fdef-arglist
-                        kw-is
+                        (? fdef-arglist)
+                        (or kw-is kw-as)
                         function-block)
   (:lambda (function)
     (destructuring-bind (p name args is fun)
@@ -32,11 +33,11 @@
 
 (defrule function (and kw-function
                        namestring
-                       fdef-arglist
+                       (? fdef-arglist)
                        kw-return
                        typename
                        (? result-cache)
-                       kw-is
+                       (or kw-is kw-as)
                        function-block)
   (:lambda (function)
     (destructuring-bind (f name args r rettype result-cache is fun)
@@ -52,3 +53,6 @@
 
 (defrule create-or-replace-package-body (and create-or-replace kw-package kw-body)
   (:constant :c-o-r-pbody))
+
+(defrule package-init (and kw-begin body)
+  (:destructure (begin code) (declare (ignore begin)) code))

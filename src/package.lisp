@@ -109,6 +109,7 @@
            #:make-package-body
            #:package-body-qname
            #:package-body-object-list
+           #:package-body-init
 
            #:package-spec
            #:package-spec-p
@@ -161,6 +162,13 @@
            #:pl-for-range-start
            #:pl-for-range-end
 
+           #:pl-loop
+           #:pl-loop-p
+           #:make-pl-loop
+           #:pl-loop-var
+           #:pl-loop-cursor
+           #:pl-loop-body
+
            #:pl-case
            #:pl-case-p
            #:make-pl-case
@@ -203,6 +211,7 @@
            #:make-pl-fetch
            #:pl-fetch-qname
            #:pl-fetch-expr
+           #:pl-fetch-bulk
 
            #:pl-close
            #:pl-close-p
@@ -225,10 +234,21 @@
            #:make-pl-return
            #:pl-return-value
 
+           #:pl-execute
+           #:pl-execute-p
+           #:make-pl-execute
+           #:pl-execute-sql
+           #:pl-execute-immediate-p
+
            #:pl-raise
            #:pl-raise-p
            #:make-pl-raise
            #:pl-raise-exception
+
+           #:pl-exit
+           #:pl-exit-p
+           #:make-pl-exit
+           #:pl-exit-when
 
            #:query
            #:query-p
@@ -244,6 +264,7 @@
            #:expr-case
            #:expr-case-p
            #:make-expr-case
+           #:expr-case-expr
            #:expr-case-when-list
            #:expr-case-else-expr
 
@@ -252,6 +273,12 @@
            #:make-expr-case-when
            #:expr-case-when-cond
            #:expr-case-when-expr
+
+           #:expr-cast
+           #:expr-cast-p
+           #:make-expr-cast
+           #:expr-cast-expr
+           #:expr-cast-as-type
 
            #:comment
            #:comment-p

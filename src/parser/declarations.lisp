@@ -9,7 +9,7 @@
 
 (defrule declarations (* (or cursor var-declaration type-declaration)))
 
-(defrule cursor (and kw-cursor namestring fdef-arglist kw-is query)
+(defrule cursor (and kw-cursor namestring (? fdef-arglist) kw-is query)
   (:destructure (c name args is q)
                 (declare (ignore c is))
                 `(:cursor ,name ,args ,q)))
@@ -17,12 +17,13 @@
 (defrule var-declaration (and ignore-whitespace (! kw-begin)
                               declare-varname
                               ignore-whitespace
+                              (? kw-constant)
                               typename
                               (? default-value)
                               sc)
   (:lambda (x)
-    (destructuring-bind (ws1 noise varname ws2 type default sc) x
-      (declare (ignore noise ws1 ws2 sc))
+    (destructuring-bind (ws1 noise varname ws2 const type default sc) x
+      (declare (ignore noise const ws1 ws2 sc))
       (make-decl-var :name varname :type type :default default))))
 
 (defrule declare-varname (or dollar-varname varname-%option namestring))

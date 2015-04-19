@@ -33,6 +33,15 @@
                                      (:file "expr" :depends-on ("keywords"
                                                                 "misc"))
 
+                                     (:file "funexpr" :depends-on ("keywords"
+                                                                   "misc"
+                                                                   "expr"))
+
+                                     (:file "collection-methods"
+                                            :depends-on ("keywords"
+                                                         "misc"
+                                                         "expr"))
+
                                      (:file "declarations" :depends-on ("keywords"
                                                                         "misc"
                                                                         "expr"))
@@ -42,7 +51,9 @@
                                      (:file "fun" :depends-on ("keywords"
                                                                "misc"
                                                                "query"
-                                                               "typename"))
+                                                               "typename"
+                                                               "expr"
+                                                               "funexpr"))
                                      (:file "pspec" :depends-on ("keywords"
                                                                  "misc"
                                                                  "expr"

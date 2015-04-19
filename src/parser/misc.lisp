@@ -56,9 +56,11 @@
             (t
              (make-cname :schema nil :relname nil :attribute a))))))
 
-(defrule dec-number (and (? "-") (+ (digit-char-p character)))
+(defrule dec-number (and (? "-")
+                         (+ (digit-char-p character))
+                         (? (and "." (+ (digit-char-p character)))))
   (:lambda (digits)
-    (parse-integer (text digits))))
+    (read-from-string (text digits))))
 
 (defrule dollar-varname (and "$$" namestring)
   (:destructure (dollar name)

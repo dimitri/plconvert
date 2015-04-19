@@ -33,7 +33,7 @@
 
 (defstruct proc name arg-list code)
 
-(defstruct package-body qname object-list)
+(defstruct package-body qname object-list init)
 
 (defstruct package-spec qname decl-list )
 
@@ -47,6 +47,7 @@
 (defstruct pl-for var set body)
 (defstruct pl-forall var set body)
 (defstruct pl-for-range start end)
+(defstruct pl-loop var cursor body)
 
 (defstruct pl-case expr when-list else-body)
 (defstruct pl-case-when cond body)
@@ -57,20 +58,23 @@
 (defstruct pl-perform name arg-list)
 
 (defstruct pl-open name funcall query)
-(defstruct pl-fetch qname expr)
+(defstruct pl-fetch qname expr bulk)
 (defstruct pl-close qname)
 
 (defstruct pl-exception when-list)
 (defstruct pl-exception-when cond body)
 
+(defstruct pl-execute sql immediate-p)
 (defstruct pl-return value)
 (defstruct pl-raise exception)
+(defstruct pl-exit when)
 
 (defstruct query sql)
 
 (defstruct expr-op operator operands)
-(defstruct expr-case when-list else-expr)
+(defstruct expr-case expr when-list else-expr)
 (defstruct expr-case-when cond expr)
+(defstruct expr-cast expr as-type)
 
 (defstruct comment text single-line-p)
 

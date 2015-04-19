@@ -17,6 +17,14 @@
 
         (t :unknown)))
 
+(defun package-spec-file-p (pathname)
+  "Return non-nil when PATHNAME file type is package-spec."
+  (eq :package-spec (file-type pathname)))
+
+(defun package-body-file-p (pathname)
+  "Return non-nil when PATHNAME file type is package-body."
+  (eq :package-body (file-type pathname)))
+
 (defun parse-file (pathname &optional (external-format *external-format*))
   "Parse given filename."
   (ecase (file-type pathname)
@@ -55,19 +63,20 @@
 ;;; packages and schema wherein to find the .pkb and .pks files. We parse
 ;;; the whole set of .pks files then consider the .pkb.
 ;;;
-(defun find-spec-files (directory)
+(defun find-files (directory &optional (file-type-list '(:package-spec
+                                                         :package-body)))
   "Find all spec files in a given directory."
-  (let (spec-files)
-    (flet ((collect-spec-files (filename)
-             (when (eq :package-spec (file-type filename))
-               (push filename spec-files))))
+  (let (files)
+    (flet ((collect-files (filename)
+             (when (member (file-type filename) file-type-list)
+               (push filename files))))
       (uiop:collect-sub*directories directory
                                     t   ; always collect
                                     t   ; always recurse
                                     (lambda (directory)
-                                      (mapcar #'collect-spec-files
+                                      (mapcar #'collect-files
                                               (uiop:directory-files directory)))))
-    spec-files))
+    files))
 
 (defun convert-package (pathname directory)
   "Convert a source file into a PL/pgSQL file."
@@ -79,6 +88,19 @@
 (defun test (expression input directory)
   "Test parsing and converting INPUT given a DIRECTORY of specs etc."
   (let ((list-of-package-specs
-         (mapcar #'parse-file (find-spec-files directory))))
+         (mapcar #'parse-file (find-files directory '(:package-spec)))))
     (plsql-to-plpgsql (plconvert.parser::parse expression input)
                       list-of-package-specs)))
+
+;;;
+;;; Let's have a simpler API where you give it a directory and we convert
+;;; all we can find in there, recursively.
+;;;
+(defun convert-from (directory)
+  "Walk DIRECTORY for files we know about and convert them."
+  (let* ((all-files  (find-files directory))
+         (spec-files (remove-if-not #'package-spec-file-p all-files))
+         (specs      (mapcar #'parse-file spec-files)))
+    (loop :for source :in all-files
+       :when (package-body-file-p source)
+       :do   (plsql-to-plpgsql (parse-file source) specs))))
