@@ -109,9 +109,7 @@
                  (format t "            traversed ~{~a~^ ~}~%"
                          (mapcar
                           (lambda (node)
-                            (format nil "~a {~16r}"
-                                    (type-of node)
-                                    (sb-kernel:get-lisp-obj-address node)))
+                            (print-unreadable-object (node :type t :identity t)))
                           *traversed-nodes*))
 
                  (format t "              funcall ~a~%"
