@@ -109,7 +109,7 @@
                  (format t "            traversed ~{~a~^ ~}~%"
                          (mapcar
                           (lambda (node)
-                            (print-unreadable-object (node :type t :identity t)))
+                            (print-unreadable-object (node t :type t :identity t)))
                           *traversed-nodes*))
 
                  (format t "              funcall ~a~%"
